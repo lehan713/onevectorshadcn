@@ -355,19 +355,33 @@ useEffect(() => {
     }
   };
 
-  const confirmDelete = async () => {
+  const confirmDelete = async () => 
+    {
     if (!selectedCandidate) return;
 
+  
+
     try {
+      // First delete the qualifications
+      await axios.delete(`http://localhost:3000/api/qualifications/${selectedCandidate.id}`);
+      // Then delete the user skills
+      await axios.delete(`http://localhost:3000/api/user_skills/${selectedCandidate.id}`);
+      // Then delete the user certifications
+      await axios.delete(`http://localhost:3000/api/user_certifications/${selectedCandidate.id}`);
+      // Then delete the personal details
+      await axios.delete(`http://localhost:3000/api/personaldetails/${selectedCandidate.id}`);
+      // Finally delete the user
       await axios.delete(`http://localhost:3000/api/candidates/${selectedCandidate.id}`);
+      
       setCandidates(candidates.filter((candidate) => candidate.id !== selectedCandidate.id));
       setSuccessMessageText('Candidate deleted successfully!');
       setShowSuccessMessage(true);
       setIsDeleteModalOpen(false);
       setTimeout(() => setShowSuccessMessage(false), 3000);
-    } catch {
-      alert('Failed to delete candidate');
-    }
+  } catch (error) {
+      alert('Failed to delete candidate and their associated data');
+      console.error('Delete error:', error);
+  }
   };
 
   return (
