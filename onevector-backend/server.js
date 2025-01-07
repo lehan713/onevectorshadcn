@@ -19,7 +19,7 @@ const app = express();
 /*
 // Enable CORS (using cors middleware)
 app.use(cors({
-  origin: 'https://main.d2u3zhxt1dfrjs.amplifyapp.com', // Frontend URL
+  origin: 'https://main.djco7qrinrz5i.amplifyapp.com/', // Frontend URL
   methods: ['GET','POST','PUT','DELETE' ,'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true,
@@ -27,7 +27,7 @@ app.use(cors({
 
 // Handle preflight (OPTIONS) requests
 app.options('*', (req, res) => {
-  res.setHeader('Access-Control-Allow-Origin', 'https://main.d1jp2jnbi5jpx5.amplifyapp.com');
+  res.setHeader('Access-Control-Allow-Origin', 'https://main.djco7qrinrz5i.amplifyapp.com/');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT,DELETE,OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   res.setHeader('Access-Control-Allow-Credentials', 'true');
@@ -230,44 +230,50 @@ app.post('/api/forgot-password', async (req, res) => {
   }
 });
 
-
-// Reset Password API
+//Reset Password
 app.post('/api/reset-password', async (req, res) => {
   const { token, newPassword } = req.body;
+
+  console.log("Request body:", req.body); // Debugging received payload
+
   if (!token || !newPassword) {
     return res.status(400).json({ error: 'Token and new password are required' });
   }
 
   try {
-    // Fetch users who have a non-null reset_token
-    const [rows] = await pool.execute('SELECT id, reset_token, reset_token_expiry FROM users WHERE reset_token IS NOT NULL');
+    const [rows] = await pool.execute(
+      'SELECT id, reset_token, reset_token_expiry FROM users WHERE reset_token IS NOT NULL'
+    );
     if (rows.length === 0) {
       return res.status(400).json({ error: 'Invalid or expired token' });
     }
 
-    // Find the user with a matching reset token
-    const user = rows.find(async (u) => await bcrypt.compare(token, u.reset_token));
+    let user = null;
+    for (const u of rows) {
+      console.log("Comparing token:", token, "with stored hash:", u.reset_token); // Debugging comparison
+      if (await bcrypt.compare(token, u.reset_token)) {
+        user = u;
+        break;
+      }
+    }
+
     if (!user) {
       return res.status(400).json({ error: 'Invalid or expired token' });
     }
 
-    // Check if the token has expired
     if (new Date() > new Date(user.reset_token_expiry)) {
       return res.status(400).json({ error: 'Token has expired' });
     }
 
-    // Hash the new password
     const hashedPassword = await bcrypt.hash(newPassword, 10);
-
-    // Update the password, but keep the reset_token and reset_token_expiry as they are
-    await pool.execute('UPDATE users SET password = ? WHERE id = ?', [
-      hashedPassword,
-      user.id,
-    ]);
+    await pool.execute(
+      'UPDATE users SET password = ?, reset_token = NULL, reset_token_expiry = NULL WHERE id = ?',
+      [hashedPassword, user.id]
+    );
 
     res.json({ message: 'Password updated successfully' });
   } catch (error) {
-    console.error('Error:', error);
+    console.error('Error during password reset:', error);
     res.status(500).json({ error: 'An error occurred while resetting the password' });
   }
 });
