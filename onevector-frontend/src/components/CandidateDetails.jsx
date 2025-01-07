@@ -42,8 +42,102 @@ const [newCertification, setNewCertification] = useState('');
     const [resumeFile, setResumeFile] = useState(null); // For handling resume file upload
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const { isDarkMode, toggleTheme } = useTheme();
+    const [originalData, setOriginalData] = useState({
+      personalDetails: {},
+      qualifications: [],
+      skills: [],
+      certifications: []
+  });
+  const [draftData, setDraftData] = useState({
+    personalDetails: {},
+    qualifications: [],
+    skills: [],
+    certifications: []
+});
 
+// Update useEffect to initialize data
+useEffect(() => {
+    if (candidate?.id) {
+        fetchPersonalDetails(candidate.id);
+    }
+}, [candidate]);
+
+const fetchPersonalDetails = async (id) => {
+    try {
+        const response = await axios.get(`http://localhost:3000/api/personalDetails/${id}`);
+        const initialData = {
+            personalDetails: {
+                ...response.data.personalDetails,
+                username: candidate.username // Include username from candidate data
+            } || {},
+            qualifications: response.data.qualifications || [],
+            skills: response.data.skills || [],
+            certifications: response.data.certifications || []
+        };
+        setDetails(response.data);
+        setFormData(initialData);
+    } catch (err) {
+        setError('Failed to fetch personal details');
+        console.error(err);
+    } finally {
+        setLoading(false);
+    }
+};
+
+const handleEditToggle = (section) => {
+  console.log('Toggling edit mode for section:', section);
+  console.log('Current editing state:', isEditing);
   
+  if (!isEditing[section]) {
+      setDraftData({
+          ...draftData,
+          [section]: section === 'personalDetails'
+              ? { ...formData.personalDetails }
+              : [...formData[section]]
+      });
+  }
+  
+  setIsEditing(prevState => {
+      const newState = {
+          ...prevState,
+          [section]: !prevState[section]
+      };
+      console.log('New editing state:', newState);
+      return newState;
+  });
+};
+// Update handleChange to modify draft data instead of actual data
+const handleChange = (e) => {
+  const { name, value } = e.target;
+  
+  if (name.startsWith('personalDetails.')) {
+      const field = name.split('.')[1];
+      setDraftData(prev => ({
+          ...prev,
+          personalDetails: {
+              ...prev.personalDetails,
+              [field]: value
+          }
+      }));
+  } else if (name.startsWith('qualification_')) {
+        const [, index, field] = name.split('_');
+        setDraftData(prev => {
+            const updatedQualifications = [...prev.qualifications];
+            if (!updatedQualifications[index]) {
+                updatedQualifications[index] = {};
+            }
+            updatedQualifications[index] = {
+                ...updatedQualifications[index],
+                [field]: value
+            };
+            return {
+                ...prev,
+                qualifications: updatedQualifications
+            };
+        });
+    }
+};
+
       // Prepare the data for Excel export
       const handleDownloadDetails = () => {
         // Prepare data for row-by-row export
@@ -120,111 +214,46 @@ const [newCertification, setNewCertification] = useState('');
         saveAs(blob, `${candidate.username}_details.xlsx`);
     };
 
-    // Fixed useEffect for initial data fetch
-    useEffect(() => {
-      if (candidate?.id) {
-          fetchPersonalDetails(candidate.id);
-      }
-  }, [candidate]);
-
-  const fetchPersonalDetails = async (id) => {
-      try {
-          const response = await axios.get(`http://localhost:3000/api/personalDetails/${id}`);
-          setDetails(response.data);
-          setFormData({
-              personalDetails: response.data.personalDetails || {},
-              qualifications: response.data.qualifications || [],
-              skills: response.data.skills || [],
-              certifications: response.data.certifications || []
-          });
-      } catch (err) {
-          setError('Failed to fetch personal details');
-          console.error(err);
-      } finally {
-          setLoading(false);
-      }
-  };
-
-  // Fixed handleChange function
-  const handleChange = (e) => {
-      const { name, value } = e.target;
-      
-      if (name.startsWith('qualification_')) {
-          const [, index, field] = name.split('_');
-          setFormData(prev => {
-              const updatedQualifications = [...prev.qualifications];
-              if (!updatedQualifications[index]) {
-                  updatedQualifications[index] = {};
-              }
-              updatedQualifications[index] = {
-                  ...updatedQualifications[index],
-                  [field]: value
-              };
-              return { ...prev, qualifications: updatedQualifications };
-          });
-      } else if (name.startsWith('personalDetails_')) 
-        {
-          const field = name.split('_')[1];
-          setFormData(prev => ({
-              ...prev,
-              personalDetails: {
-                  ...prev.personalDetails,
-                  [field]: value
-              }
-          }));
-        }
-        // Handling skills fields
-      else if (name.startsWith('skill_')) {
-        const index = name.split('_')[1];
-        setFormData((prev) => {
-            const updatedSkills = [...prev.skills];
-            updatedSkills[index] = value;
-            return { ...prev, skills: updatedSkills };
-        });
-    }
-
-    // Handling certifications fields
-    else if (name.startsWith('certification_')) {
-      const index = name.split('_')[1];
-      setFormData((prev) => {
-          const updatedCertifications = [...prev.certifications];
-          updatedCertifications[index] = value;
-          return { ...prev, certifications: updatedCertifications };
-      });
-  }
-  };
-
   // Fixed handleSubmit function
   const handleSubmit = async (e, section) => {
-      e.preventDefault();
-      if (!details?.personalDetails?.id) {
-          setError('No ID found for update');
-          return;
-      }
+    e.preventDefault();
+    if (!details?.personalDetails?.id) {
+        setError('No ID found for update');
+        return;
+    }
 
-      try {
-          const id = details.personalDetails.id;
-          const formDataToSubmit = new FormData();
+    try {
+        const id = details.personalDetails.id;
+        const formDataToSubmit = new FormData();
 
-          switch (section) {
-              case 'personal':
-                  Object.entries(formData.personalDetails).forEach(([key, value]) => {
-                      formDataToSubmit.append(key, value);
-                  });
-                  if (resumeFile) {
-                      formDataToSubmit.append('resume', resumeFile);
-                  }
-                  await axios.put(`http://localhost:3000/api/candidates/${id}/personal`, formDataToSubmit, {
-                      headers: { 'Content-Type': 'multipart/form-data' }
-                  });
-                  break;
-                  
-              case 'qualifications':
-                  await axios.put(`http://localhost:3000/api/candidates/${id}/qualifications`, {
-                      qualifications: formData.qualifications
-                  });
-                  break;
+        switch (section) {
+            case 'personalDetails':
+                Object.entries(draftData.personalDetails).forEach(([key, value]) => {
+                    formDataToSubmit.append(key, value);
+                });
+                if (resumeFile) {
+                    formDataToSubmit.append('resume', resumeFile);
+                }
+                await axios.put(`http://localhost:3000/api/candidates/${id}/personal`, formDataToSubmit, {
+                    headers: { 'Content-Type': 'multipart/form-data' }
+                });
+                // Update actual data after successful submit
+                setFormData(prev => ({
+                    ...prev,
+                    personalDetails: draftData.personalDetails
+                }));
+                break;
 
+            case 'qualifications':
+                await axios.put(`http://localhost:3000/api/candidates/${id}/qualifications`, {
+                    qualifications: draftData.qualifications
+                });
+                // Update actual data after successful submit
+                setFormData(prev => ({
+                    ...prev,
+                    qualifications: draftData.qualifications
+                }));
+                break;
               case 'skills':
                   await axios.put(`http://localhost:3000/api/candidates/${id}/skills`, {
                       skills: formData.skills
@@ -237,13 +266,12 @@ const [newCertification, setNewCertification] = useState('');
                   });
                   break;
           }
-
-          await fetchPersonalDetails(id);
           handleEditToggle(section);
-      } catch (err) {
-          setError(`Failed to update ${section}: ${err.message}`);
-      }
-  };
+    } catch (err) {
+        setError(`Failed to update ${section}: ${err.message}`);
+    }
+    };
+
     const handleAddSkill = () => {
       if (newSkill.trim()) {
         setFormData({
@@ -323,15 +351,7 @@ const [newCertification, setNewCertification] = useState('');
       });
     }
   };
-  
 
-
-    const handleEditToggle = (section) => {
-      setIsEditing((prevState) => ({
-        ...prevState,
-        [section]: !prevState[section],
-      }));
-    };
     const handleLogout = () => {
       localStorage.removeItem('token');
       navigate('/');
@@ -463,102 +483,112 @@ const recentJob = formData.qualifications.length > 0 ? formData.qualifications[0
             <div className="flex justify-between items-center">
               <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Personal Details</h3>
               <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={() => handleEditToggle('personal')}
-                className="border-[#15BACD] text-[#15BACD] hover:bg-[#15BACD] hover:text-white transition-colors"
-              >
-                <Edit2 className="h-4 w-4 mr-2" />
-                Edit Details
-              </Button>
+    variant="outline" 
+    size="sm" 
+    onClick={() => handleEditToggle('personalDetails')}  // Changed from 'personal' to 'personalDetails'
+    className="border-[#15BACD] text-[#15BACD] hover:bg-[#15BACD] hover:text-white transition-colors"
+>
+    <Edit2 className="h-4 w-4 mr-2" />
+    Edit Details
+</Button>
             </div>
           </div>
           
           <div className="p-6">
-            {isEditing.personal ? (
-              <form onSubmit={(e) => handleSubmit(e, 'personal')}>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                  <div className="space-y-2">
-                    <Label className="text-gray-700 dark:text-gray-300">Phone Number</Label>
-                    <Input
-                      name="phone_no"
-                      value={formData.personalDetails?.phone_no || ''}
-                      onChange={handleChange}
-                      className="border-gray-300 dark:border-gray-600 focus:border-[#15BACD] focus:ring-[#15BACD]"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-gray-700 dark:text-gray-300">Country</Label>
-                    <Input
-                      name="country"
-                      value={formData.personalDetails?.country || ''}
-                      onChange={handleChange}
-                      className="border-gray-300 dark:border-gray-600 focus:border-[#15BACD] focus:ring-[#15BACD]"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-gray-700 dark:text-gray-300">City</Label>
-                    <Input
-                      name="city"
-                      value={formData.personalDetails?.city || ''}
-                      onChange={handleChange}
-                      className="border-gray-300 dark:border-gray-600 focus:border-[#15BACD] focus:ring-[#15BACD]"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-gray-700 dark:text-gray-300">State</Label>
-                    <Input
-                      name="state"
-                      value={formData.personalDetails?.state || ''}
-                      onChange={handleChange}
-                      className="border-gray-300 dark:border-gray-600 focus:border-[#15BACD] focus:ring-[#15BACD]"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-gray-700 dark:text-gray-300">Postal Code</Label>
-                    <Input
-                      name="postal_code"
-                      value={formData.personalDetails?.postal_code || ''}
-                      onChange={handleChange}
-                      className="border-gray-300 dark:border-gray-600 focus:border-[#15BACD] focus:ring-[#15BACD]"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-gray-700 dark:text-gray-300">Address</Label>
-                    <Input
-                      name="address_line1"
-                      value={formData.personalDetails?.address_line1 || ''}
-                      onChange={handleChange}
-                      className="border-gray-300 dark:border-gray-600 focus:border-[#15BACD] focus:ring-[#15BACD]"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-gray-700 dark:text-gray-300">LinkedIn URL</Label>
-                    <Input
-                      name="linkedin_url"
-                      value={formData.personalDetails?.linkedin_url || ''}
-                      onChange={handleChange}
-                      className="border-gray-300 dark:border-gray-600 focus:border-[#15BACD] focus:ring-[#15BACD]"
-                    />
-                  </div>
-                </div>
-                <div className="flex justify-end space-x-3 mt-6">
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    onClick={() => handleEditToggle('personal')}
-                    className="border-gray-300 text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
-                  >
-                    Cancel
-                  </Button>
-                  <Button 
-                    type="submit"
-                    className="bg-gradient-to-r from-[#15BACD] to-[#094DA2] text-white hover:opacity-90"
-                  >
-                    Save Changes
-                  </Button>
-                </div>
-              </form>
+          {isEditing.personalDetails ? (
+  <form onSubmit={(e) => handleSubmit(e, 'personalDetails')}>
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="space-y-2">
+        <Label className="text-gray-700 dark:text-gray-300">Username</Label>
+        <Input
+          name="personalDetails.username"
+          value={draftData.personalDetails?.username || ''}
+          onChange={handleChange}
+          className="border-gray-300 dark:border-gray-600 focus:border-[#15BACD] focus:ring-[#15BACD]"
+        />
+      </div>
+      <div className="space-y-2">
+        <Label className="text-gray-700 dark:text-gray-300">Phone Number</Label>
+        <Input
+          name="personalDetails.phone_no"
+          value={draftData.personalDetails?.phone_no || ''}
+          onChange={handleChange}
+          className="border-gray-300 dark:border-gray-600 focus:border-[#15BACD] focus:ring-[#15BACD]"
+        />
+      </div>
+      <div className="space-y-2">
+        <Label className="text-gray-700 dark:text-gray-300">Country</Label>
+        <Input
+          name="personalDetails.country"
+          value={draftData.personalDetails?.country || ''}
+          onChange={handleChange}
+          className="border-gray-300 dark:border-gray-600 focus:border-[#15BACD] focus:ring-[#15BACD]"
+        />
+      </div>
+      <div className="space-y-2">
+        <Label className="text-gray-700 dark:text-gray-300">City</Label>
+        <Input
+          name="personalDetails.city"
+          value={draftData.personalDetails?.city || ''}
+          onChange={handleChange}
+          className="border-gray-300 dark:border-gray-600 focus:border-[#15BACD] focus:ring-[#15BACD]"
+        />
+      </div>
+      <div className="space-y-2">
+        <Label className="text-gray-700 dark:text-gray-300">State</Label>
+        <Input
+          name="personalDetails.state"
+          value={draftData.personalDetails?.state || ''}
+          onChange={handleChange}
+          className="border-gray-300 dark:border-gray-600 focus:border-[#15BACD] focus:ring-[#15BACD]"
+        />
+      </div>
+      <div className="space-y-2">
+        <Label className="text-gray-700 dark:text-gray-300">Postal Code</Label>
+        <Input
+          name="personalDetails.postal_code"
+          value={draftData.personalDetails?.postal_code || ''}
+          onChange={handleChange}
+          className="border-gray-300 dark:border-gray-600 focus:border-[#15BACD] focus:ring-[#15BACD]"
+        />
+      </div>
+      <div className="space-y-2">
+        <Label className="text-gray-700 dark:text-gray-300">Address</Label>
+        <Input
+          name="personalDetails.address_line1"
+          value={draftData.personalDetails?.address_line1 || ''}
+          onChange={handleChange}
+          className="border-gray-300 dark:border-gray-600 focus:border-[#15BACD] focus:ring-[#15BACD]"
+        />
+      </div>
+      <div className="space-y-2">
+        <Label className="text-gray-700 dark:text-gray-300">LinkedIn URL</Label>
+        <Input
+          name="personalDetails.linkedin_url"
+          value={draftData.personalDetails?.linkedin_url || ''}
+          onChange={handleChange}
+          className="border-gray-300 dark:border-gray-600 focus:border-[#15BACD] focus:ring-[#15BACD]"
+        />
+      </div>
+    </div>
+    <div className="flex justify-end space-x-3 mt-6">
+      <Button 
+        type="button" 
+        variant="outline" 
+        onClick={() => handleEditToggle('personalDetails')}
+        className="border-gray-300 text-gray-700 hover:bg-gray-100"
+      >
+        Cancel
+      </Button>
+      <Button 
+        type="submit"
+        className="bg-gradient-to-r from-[#15BACD] to-[#094DA2] text-white"
+      >
+        Save Changes
+      </Button>
+    </div>
+  </form>
+
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <div className="space-y-2">
@@ -628,20 +658,19 @@ const recentJob = formData.qualifications.length > 0 ? formData.qualifications[0
   </div>
 
   <div className="p-6">
-    {isEditing.qualifications ? (
-      <form onSubmit={(e) => handleSubmit(e, 'qualifications')}>
-        {formData.qualifications.map((qual, index) => (
-          <div key={index} className="space-y-6 mb-6">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-              <div className="space-y-2">
-                <Label>Recent Job</Label>
-                <Input
-                  name={`qualification_${index}_recent_job`}
-                  value={qual.recent_job || ''}
-                  onChange={handleChange}
-                  className="border-gray-300 focus:border-[#15BACD] focus:ring-[#15BACD]"
-                />
-              </div>
+  {isEditing.qualifications ? (
+            <form onSubmit={(e) => handleSubmit(e, 'qualifications')}>
+                {draftData.qualifications.map((qual, index) => (
+                    <div key={index} className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                        <div className="space-y-2">
+                            <Label>Recent Job</Label>
+                            <Input
+                                name={`qualification_${index}_recent_job`}
+                                value={qual.recent_job || ''}
+                                onChange={handleChange}
+                                className="border-gray-300 focus:border-[#15BACD]"
+                            />
+                        </div>
               <div className="space-y-2">
                 <Label>Preferred Role</Label>
                 <Input
@@ -697,7 +726,6 @@ const recentJob = formData.qualifications.length > 0 ? formData.qualifications[0
   />
 </div>
             </div>
-          </div>
         ))}
         <div className="flex justify-end space-x-3 mt-6">
           <Button 
