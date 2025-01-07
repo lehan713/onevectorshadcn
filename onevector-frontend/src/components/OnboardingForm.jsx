@@ -13,6 +13,7 @@ import { ChevronDownIcon } from '@heroicons/react/solid';
 import TalentHubImage from './images/talenthub.png';
 
 
+
 const OnboardingForm = () => {
     const navigate = useNavigate();
     const [step, setStep] = useState(1);
@@ -130,12 +131,14 @@ const OnboardingForm = () => {
             headers: {
               'Content-Type': 'multipart/form-data',
             },
+            
           });
+          navigate('/success');
           
-          if (response.status === 200) {
+        /*  if (response.status === 200) {
             // Redirect to success page
             navigate('/success');
-          }
+          }*/
         } catch (error) {
           console.error('Error submitting the form:', error);
           alert('An error occurred while submitting the form. Please try again later.');
