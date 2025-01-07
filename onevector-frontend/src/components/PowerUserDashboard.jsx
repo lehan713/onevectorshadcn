@@ -1,17 +1,33 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { FaBell, FaHistory, FaSignOutAlt } from 'react-icons/fa';
+import {  FaHistory, FaSignOutAlt } from 'react-icons/fa';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faCrown, faUser } from '@fortawesome/free-solid-svg-icons';
-import { tableRowVariant, buttonVariant, modalVariant } from './animations';
+import { faCrown } from '@fortawesome/free-solid-svg-icons';
+import {  buttonVariant, modalVariant } from './animations';
 import { motion } from 'framer-motion';
 import { FaCrown } from 'react-icons/fa';
-import oneVectorImage from './images/onevector.png'; // Adjust the path based on your folder structure4
+import oneVectorImage from './images/onevector.png'; 
 import MagicLinkHistoryPopup from './MagicLinkHistoryPopup';
 import * as XLSX from 'xlsx'; 
 import {DownloadIcon,SunIcon, MoonIcon, } from '@heroicons/react/solid';
+import { Button } from "@/components/ui/button"
 import { useTheme } from "../ThemeContext"; // Ensure correct import path
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Card } from "@/components/ui/card";
+import { Check } from "lucide-react";
+import { Toggle } from "@/components/ui/toggle";
+import { cn } from "@/lib/utils";
+import { Input } from "@/components/ui/input";
+import { Table, TableBody, TableCell, TableHead,TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
 
 
 function PowerUserDashboard() {
@@ -23,7 +39,6 @@ function PowerUserDashboard() {
   const [showForm, setShowForm] = useState(false);
   const [error, setError] = useState('');
   const [sentEmails, setSentEmails] = useState([]);
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const [isRoleChangeModalOpen, setIsRoleChangeModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedCandidate, setSelectedCandidate] = useState(null);
@@ -37,7 +52,65 @@ function PowerUserDashboard() {
   const [showHistoryPopup, setShowHistoryPopup] = useState(false);
 const [magicLinks, setMagicLinks] = useState([]);
 const { isDarkMode, toggleTheme } = useTheme();
-  useEffect(() => {
+
+const handleDownloadDetails = async () => {
+  try {
+    const response = await axios.get('http://localhost:3000/api/candidates'); // Fetch candidates
+
+    if (response.data.length === 0) {
+      alert('No candidate details available to download.');
+      return;
+    }
+
+    // Create an array to hold all candidate details
+    const candidatesWithDetails = await Promise.all(response.data.map(async (candidate) => {
+      // Fetch personal details for each candidate
+      const personalDetailsResponse = await axios.get(`http://localhost:3000/api/personalDetails/${candidate.id}`);
+      const personalDetails = personalDetailsResponse.data;
+
+      // Combine candidate and personal details
+      return {
+        FirstName: personalDetails.personalDetails.first_name || 'N/A',
+        LastName: personalDetails.personalDetails.last_name || 'N/A',
+        Email: candidate.email || 'N/A',
+        Role: candidate.role || 'N/A',
+        Username: candidate.username || 'N/A',
+        Phone: personalDetails.personalDetails.phone_no || 'N/A',
+        Address: `${personalDetails.personalDetails.address_line1 || ''}, ${personalDetails.personalDetails.address_line2 || ''}`,
+        City: personalDetails.personalDetails.city || 'N/A',
+        State: personalDetails.personalDetails.state || 'N/A',
+        Country: personalDetails.personalDetails.country || 'N/A',
+        PostalCode: personalDetails.personalDetails.postal_code || 'N/A',
+        LinkedIn: personalDetails.personalDetails.linkedin_url || 'N/A',
+        ResumePath: personalDetails.personalDetails.resume_path || 'N/A',
+        RecentJob: personalDetails.qualifications[0]?.recent_job || 'N/A',
+        PreferredRoles: personalDetails.qualifications[0]?.preferred_roles || 'N/A',
+        Availability: personalDetails.qualifications[0]?.availability || 'N/A',
+        WorkPermitStatus: personalDetails.qualifications[0]?.work_permit_status || 'N/A',
+        PreferredRoleType: personalDetails.qualifications[0]?.preferred_role_type || 'N/A',
+        PreferredWorkArrangement: personalDetails.qualifications[0]?.preferred_work_arrangement || 'N/A',
+        Compensation: personalDetails.qualifications[0]?.compensation || 'N/A',
+        Skills: personalDetails.skills.join(', ') || 'N/A',
+        Certifications: personalDetails.certifications.join(', ') || 'N/A',
+      };
+    }));
+
+    // Generate an Excel worksheet
+    const worksheet = XLSX.utils.json_to_sheet(candidatesWithDetails);
+
+    // Create a new workbook and append the worksheet
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Candidates');
+
+    // Trigger download of the Excel file
+    XLSX.writeFile(workbook, 'Candidate_Details.xlsx');
+  } catch (error) {
+    console.error('Error downloading candidate details:', error);
+    alert(`Failed to download candidate details: ${error.message}`);
+  }
+};
+
+useEffect(() => {
     const fetchCandidates = async () => {
       setLoading(true);
       setError('');
@@ -163,198 +236,303 @@ const { isDarkMode, toggleTheme } = useTheme();
 
   return (
     <div className={`min-h-screen ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'} font-sans`}>
-    {showMagicLinkPopup && (
-      <div className="fixed inset-0 bg-gray-700 bg-opacity-50 flex items-center justify-center z-20">
-        <div className={`p-4 rounded-lg shadow-lg w-96 ${isDarkMode ? 'bg-green-700' : 'bg-green-500'} text-white`}>
-          <p className="text-center font-semibold">Magic Link sent successfully!</p>
+  {/* Magic Link Popup */}
+  {showMagicLinkPopup && (
+    <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-20">
+      <Alert className="w-96 border-none bg-gradient-to-r from-emerald-500 to-green-500 text-white shadow-xl">
+        <Check className="h-5 w-5" />
+        <AlertDescription className="text-center text-lg font-semibold">
+          Magic Link sent successfully!
+        </AlertDescription>
+      </Alert>
+    </div>
+  )}
+
+ {/* Success Card */}
+ {showSuccessMessage && (
+    <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-20">
+      <Card className="w-96 bg-white dark:bg-gray-800 shadow-2xl p-8 transform transition-all duration-300 ease-in-out hover:scale-105">
+        <div className="relative mx-auto w-16 h-16 mb-6">
+          <div className="absolute inset-0 bg-green-100 dark:bg-green-900/30 rounded-full animate-ping opacity-75" />
+          <div className="relative flex items-center justify-center w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-full">
+            <Check className="w-8 h-8 text-green-600 dark:text-green-400" />
+          </div>
         </div>
-      </div>
-    )}
-  
-    {showSuccessMessage && (
-      <div className={`p-4 fixed top-0 left-0 right-0 text-center z-20 ${isDarkMode ? 'bg-green-700' : 'bg-green-500'} text-white`}>
-        {successMessageText}
-      </div>
-    )}
-  
-    <header className={`fixed top-0 left-0 right-0 z-10 shadow-md ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
-      <div className="flex justify-between items-center p-4">
-        <div className="flex items-center space-x-3">
-          <img src={oneVectorImage} alt="OneVector Logo" className="w-[30px] h-[40px]" />
-          <h1 className={`text-2xl font-normal tracking-wide ${isDarkMode ? 'text-gray-100' : 'text-gray-800'}`}>
-            TalentHub
-          </h1>
-        </div>
-        <div className="flex items-center space-x-2">
-          <button
+        
+        <h2 className="text-3xl font-bold text-gray-900 dark:text-white text-center mb-4">
+          Success!
+        </h2>
+        
+        <p className="text-lg text-gray-600 dark:text-gray-300 text-center mb-6">
+          {successMessageText}
+        </p>
+        
+        <Button
+          onClick={() => setShowSuccessMessage(false)}
+          className="w-full bg-gradient-to-r from-green-500 to-emerald-500 text-white hover:from-green-600 hover:to-emerald-600 transition-all duration-300 shadow-lg hover:shadow-xl font-semibold py-6"
+        >
+          Close
+        </Button>
+      </Card>
+    </div>
+  )}
+
+  {/* Header Section */}
+  <header
+      className={cn(
+        "fixed top-0 left-0 right-0 z-10 shadow-md",
+        isDarkMode ? "bg-gray-800" : "bg-white"
+      )}
+    >
+      <div className="flex justify-between items-center p-4 w-full">
+  {/* Logo and Title (left-aligned) */}
+  <div className="flex items-center space-x-2">
+    <img
+      src={oneVectorImage}
+      alt="OneVector Logo"
+      className="w-5 h-6 md:w-10 md:h-10"
+    />
+    <h1
+      className={cn(
+        "text-3xl font-semibold tracking-wide",
+        isDarkMode
+          ? "text-transparent bg-clip-text bg-gradient-to-r from-[#15BACD] to-[#094DA2]"
+          : "text-transparent bg-clip-text bg-gradient-to-r from-[#15BACD] to-[#094DA2]"
+      )}
+    >
+      TalentHub
+    </h1>
+  </div>
+
+        {/* Action buttons (right-aligned) */}
+        <div className="flex items-center space-x-4">
+          {/* Dark Mode Toggle Button */}
+          <Toggle
             onClick={toggleTheme}
-            className={`p-2 rounded-lg ${isDarkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-200'}`}
+            className={cn(
+              "p-2 rounded-full",
+              isDarkMode
+                ? "bg-gray-700 hover:bg-gray-600"
+                : "bg-gray-200 hover:bg-gray-300"
+            )}
           >
             {isDarkMode ? (
-              <SunIcon className="w-4 h-4 md:w-7 md:h-7 text-gray-100" />
+              <SunIcon className="w-5 h-5 text-gray-100" />
             ) : (
-              <MoonIcon className="w-4 h-4 md:w-7 md:h-7 text-gray-800" />
+              <MoonIcon className="w-5 h-5 text-gray-800" />
             )}
-          </button>
-          <button
+          </Toggle>
+
+          {/* Logout Button */}
+          <Button
+            variant="outline"
             onClick={handleLogout}
-            className={`px-4 py-2 rounded-lg flex items-center space-x-2 ${isDarkMode ? 'bg-red-600 hover:bg-red-500' : 'bg-red-500 hover:bg-red-400'} text-white`}
+            className={cn(
+              "px-6 py-2 h-12 rounded-full flex items-center justify-center space-x-3 font-semibold text-base transition-all",
+              isDarkMode
+                ? "bg-gradient-to-r from-red-500 to-red-700 text-white hover:from-red-600 hover:to-red-800"
+                : "bg-gradient-to-r from-red-400 to-red-600 text-white hover:from-red-500 hover:to-red-700"
+            )}
           >
-            <FaSignOutAlt size={14} />
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth="1.5"
+              stroke="currentColor"
+              className="w-6 h-6"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-7.5A2.25 2.25 0 003.75 5.25v13.5A2.25 2.25 0 006 21h7.5a2.25 2.25 0 002.25-2.25V15"
+              />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M18 12H9m0 0l3-3m-3 3l3 3"
+              />
+            </svg>
             <span>Logout</span>
-          </button>
+          </Button>
         </div>
       </div>
     </header>
-  
-    <main className="pt-20 px-4 lg:px-16">
-    <div className="flex flex-wrap justify-between items-center mb-4 mt-8">
-  {/* Search Input */}
-  <input
-    type="text"
-    placeholder="Search by username"
-    value={searchQuery}
-    onChange={(e) => setSearchQuery(e.target.value)}
-    className={`border p-2 rounded-lg w-full md:w-1/2 ${isDarkMode ? 'border-gray-600 bg-gray-800 text-gray-100' : 'border-black'} transition-all duration-200`}
-  />
-
-  {/* Buttons and History Icon */}
-  <div className="flex flex-wrap items-center gap-4 mt-4 md:mt-0 w-full md:w-auto">
-    {/* Add User Button */}
-    <button
-      onClick={() => setShowForm(true)}
-      className={`px-6 py-2 text-white font-medium rounded-lg flex items-center justify-center ${isDarkMode ? 'bg-gradient-to-r from-[#094DA2] to-[#15abcd]' : 'bg-gradient-to-r from-[#15ABCD] to-[#094DA2]'} transition-all duration-200 hover:scale-105 hover:underline`}
-    >
-      <span className="mr-2 text-lg font-bold">+</span>
-      Add User
-    </button>
-
-    {/* History Icon */}
-    <FaHistory
-      size={20}
-      className={`cursor-pointer ${isDarkMode ? 'text-gray-100' : 'text-black'} transition-all duration-200 hover:scale-105 hover:underline`}
-      onClick={fetchMagicLinks}
+    <main className="pt-16 px-0 lg:px-0 w-full bg-white text-black dark:bg-gray-900 dark:text-white">
+  <div className="flex flex-col md:flex-row justify-between items-center mb-4 mt-8 gap-6 w-full">
+    {/* Search Input */}
+    <Input
+      type="text"
+      placeholder="Search by name, email, skills, certifications, or qualifications"
+      value={searchQuery}
+      onChange={(e) => setSearchQuery(e.target.value)}
+      className="w-full ml-2 md:w-1/2 border border-gray-300 bg-white text-black rounded-xl p-3 focus:ring-2 focus:ring-gray-500 transition-all duration-200 dark:bg-gray-800 dark:text-white dark:border-gray-700"
     />
-    {showHistoryPopup && (
-      <MagicLinkHistoryPopup
-        magicLinks={magicLinks}
-        onClose={() => setShowHistoryPopup(false)}
-      />
+
+    {/* Buttons and History Icon */}
+<div className="flex flex-wrap items-center gap-6 w-full md:w-auto mt-4 md:mt-0">
+  {/* Details Button */}
+  <Button
+    onClick={handleDownloadDetails}
+    variant="solid"
+    className="px-4 h-10 py-2 text-white font-roboto rounded-xl flex items-center justify-center bg-[#094DA2] border border-[#094DA2] hover:bg-[#093A8E] transition-all duration-200 transform hover:scale-105 focus:outline-none dark:bg-[#094DA2] dark:border-[#094DA2] dark:hover:bg-[#093A8E]"
+  >
+    <DownloadIcon className="h-5 w-5 mr-2 text-white" />
+    DETAILS
+  </Button>
+
+  {/* Add User Button */}
+  <Button
+    onClick={() => setShowForm(true)}
+    variant="solid"
+    className="px-4 h-10 py-2 text-white font-medium rounded-xl flex items-center justify-center bg-[#094DA2] border border-[#094DA2] hover:bg-[#093A8E] transition-all duration-200 transform hover:scale-105 focus:outline-none dark:bg-[#094DA2] dark:border-[#094DA2] dark:hover:bg-[#093A8E]"
+  >
+    <span className="text-lg font-bold">+</span>
+    ADD USER
+  </Button>
+
+  {/* History Icon */}
+  <FaHistory
+    size={20}
+    className="mr-2 cursor-pointer text-[#094DA2] transition-all duration-200 transform hover:scale-105 dark:text-[#094DA2] dark:hover:scale-110"
+    onClick={fetchMagicLinks}
+  />
+</div>
+</div>
+
+  {/* Magic Link History Popup */}
+  {showHistoryPopup && (
+    <MagicLinkHistoryPopup
+      magicLinks={magicLinks}
+      onClose={() => setShowHistoryPopup(false)}
+    />
+  )}
+
+{showForm && (
+  <Dialog open={showForm} onOpenChange={(open) => setShowForm(open)}>
+    <DialogTrigger asChild>
+      <Button className="hidden">Open Modal</Button>
+    </DialogTrigger>
+    <DialogContent className={`p-8 rounded-lg shadow-xl w-full md:w-96 ${isDarkMode ? 'bg-gray-800 text-gray-100' : 'bg-white text-black'}`}>
+      <DialogHeader>
+        <DialogTitle className="text-2xl font-semibold mb-4">Add a New User</DialogTitle>
+        <DialogDescription className="text-sm">Enter the email address of the new user.</DialogDescription>
+      </DialogHeader>
+      <div className="flex flex-col space-y-4">
+        <Input
+          type="email"
+          placeholder="Email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          className={`border p-3 rounded-lg placeholder-gray-400 focus:outline-none focus:ring-2 ${isDarkMode ? 'border-gray-600 bg-gray-700 text-gray-100 focus:ring-gray-500' : 'border-gray-300 focus:ring-black'}`}
+        />
+        <Button
+          onClick={sendMagicLink}
+          className={`px-6 py-3 font-medium rounded-lg focus:outline-none focus:ring-2 ${isDarkMode ? 'bg-gradient-to-r from-[#094DA2] to-[#15abcd] text-gray-100 focus:ring-[#15abcd]' : 'bg-gradient-to-r from-[#15ABCD] to-[#094DA2] text-white focus:ring-[#094DA2]'} hover:opacity-90`}
+        >
+          Send Magic Link
+        </Button>
+        <Button
+          onClick={() => setShowForm(false)}
+          className={`px-6 py-3 rounded-lg ${isDarkMode ? 'bg-gray-600 text-gray-100 hover:bg-gray-700' : 'bg-gray-300 text-black hover:bg-gray-400'}`}
+        >
+          Close
+        </Button>
+      </div>
+    </DialogContent>
+  </Dialog>
+)}
+  <div className={`bg-white dark:bg-gray-800 shadow-md overflow-hidden mt-8 w-full`}>
+    {loading ? (
+      <div className="h-screen flex flex-col justify-center items-center">
+        {/* Loader (CSS spinner) */}
+        <div className="border-t-4 border-blue-500 border-solid w-12 h-12 rounded-full animate-spin"></div>
+      </div>
+    ) : filteredCandidates.length ? (
+      <Table className="w-full text-left border-collapse font-roboto-light">
+        <TableHeader className="bg-[#EAF3FF] text-white dark:bg-gray-800 dark:text-white">
+          <TableRow>
+            <TableHead className="py-4 px-6 text-sm font-bold text-black border-r-[2px] border-white dark:text-white dark:border-gray-700">
+              TITLE
+            </TableHead>
+            <TableHead className="py-4 px-6 text-sm font-bold text-black border-r-[2px] border-white dark:text-white dark:border-gray-700">
+              EMAIL
+            </TableHead>
+            <TableHead className="py-4 px-6 text-sm font-bold text-black border-r-[2px] border-white text-center dark:text-white dark:border-gray-700">
+              ROLE
+            </TableHead>
+            <TableHead className="py-4 px-6 text-sm font-bold text-black border-r-[2px] border-white text-center dark:text-white dark:border-gray-700">
+              USERNAME
+            </TableHead>
+            <TableHead className="py-4 px-6 text-sm font-bold text-black text-center dark:text-white dark:border-gray-700">
+              ACTIONS
+            </TableHead>
+          </TableRow>
+        </TableHeader>
+
+        <TableBody className="bg-white dark:bg-gray-900">
+          {filteredCandidates.map((candidate, index) => (
+            <TableRow
+              key={candidate.id}
+              className={`border-b border-gray-200 dark:border-gray-700 ${index === filteredCandidates.length - 1 ? '' : 'border-b-2'} hover:bg-transparent dark:hover:bg-gray-700`}
+            >
+              <TableCell className="py-2.5 px-3 text-gray-800 dark:text-white">
+  <div className="flex items-center space-x-2">
+    <span className="font-medium">
+      {candidate.first_name && candidate.last_name
+        ? `${candidate.first_name} ${candidate.last_name}`
+        : candidate.first_name || candidate.last_name || "N/A"}
+    </span>
+    {candidate.role === "power_user" && (
+      <FontAwesomeIcon icon={faCrown} className="text-yellow-500" title="Power User" />
     )}
   </div>
-</div>
+</TableCell>
 
-      {showForm && (
-        <div className="fixed inset-0 bg-gray-700 bg-opacity-50 flex items-center justify-center z-20">
-          <div className={`p-8 rounded-lg shadow-xl w-96 ${isDarkMode ? 'bg-gray-800 text-gray-100' : 'bg-white text-black'}`}>
-            <h3 className="text-2xl font-semibold mb-4">Add a New User</h3>
-            <div className="flex flex-col space-y-4">
-              <input
-                type="email"
-                placeholder="Email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className={`border p-3 rounded-lg placeholder-gray-400 focus:outline-none focus:ring-2 ${isDarkMode ? 'border-gray-600 bg-gray-700 text-gray-100 focus:ring-gray-500' : 'border-gray-300 focus:ring-black'}`}
-              />
-              <button
-                onClick={sendMagicLink}
-                className={`px-6 py-3 font-medium rounded-lg focus:outline-none focus:ring-2 ${isDarkMode ? 'bg-gradient-to-r from-[#094DA2] to-[#15abcd] text-gray-100 focus:ring-[#15abcd]' : 'bg-gradient-to-r from-[#15ABCD] to-[#094DA2] text-white focus:ring-[#094DA2]'} hover:opacity-90`}
-              >
-                Send Magic Link
-              </button>
-              <button
-                onClick={() => setShowForm(false)}
-                className={`px-6 py-3 rounded-lg ${isDarkMode ? 'bg-gray-600 text-gray-100 hover:bg-gray-700' : 'bg-gray-300 text-black hover:bg-gray-400'}`}
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-  
-  <div className={`bg-white dark:bg-gray-800 shadow-md rounded-lg overflow-hidden mt-8`}>
-  {loading ? (
-    <p className="text-black dark:text-white">Loading...</p>
-  ) : filteredCandidates.length ? (
-    <div className="overflow-x-auto">
-      <table className="w-full border-collapse border-[3px] border-[#F0F4F8] dark:border-gray-700 text-left">
-        <thead className="bg-[#F7FAFC] dark:bg-gray-700 text-black dark:text-white">
-          <tr>
-            <th className="py-3 px-6 border-b-[3px] border-[#E5E9EF] dark:border-gray-600">TITLE</th>
-            <th className="py-3 px-6 border-b-[3px] border-[#E5E9EF] dark:border-gray-600">EMAIL</th>
-            <th className="py-3 px-6 text-center border-b-[3px] border-[#E5E9EF] dark:border-gray-600">ROLE</th>
-            <th className="py-3 px-6 text-center border-b-[3px] border-[#E5E9EF] dark:border-gray-600">USERNAME</th>
-            <th className="py-3 px-6 text-center border-b-[3px] border-[#E5E9EF] dark:border-gray-600">ACTIONS</th>
-          </tr>
-        </thead>
-        <tbody className="bg-white dark:bg-gray-800"> {/* Single color for the entire table in dark mode */}
-          {filteredCandidates.map((candidate) => (
-            <tr key={candidate.id}>
-              <td className="py-3 px-6 border-b-[3px] border-[#E5E9EF] dark:border-gray-600">
-                <div className="flex items-center">
-                  <span className="text-black dark:text-white font-medium">
-                    {candidate.first_name && candidate.last_name
-                      ? `${candidate.first_name} ${candidate.last_name}`
-                      : candidate.first_name || candidate.last_name || "N/A"}
-                  </span>
-                  {candidate.role === "power_user" && (
-                    <FontAwesomeIcon
-                      icon={faCrown}
-                      className="ml-2 text-yellow-500"
-                      title="Power User"
-                    />
-                  )}
-                </div>
-              </td>
-              <td className="py-3 px-6 border-b-[3px] border-[#E5E9EF] dark:border-gray-600 text-black dark:text-white">{candidate.email}</td>
-              <td className="py-3 px-6 text-center border-b-[3px] border-[#E5E9EF] dark:border-gray-600 text-black dark:text-white">
-                {candidate.role === "power_user" ? "Power User" : "User"}
-              </td>
-              <td className="py-3 px-6 text-center border-b-[3px] border-[#E5E9EF] dark:border-gray-600">
-                <span
-                  className="font-medium"
-                  style={{
-                    backgroundImage: 'linear-gradient(to right, #15abcd, #094DA2)',
-                    WebkitBackgroundClip: 'text',
-                    color: 'transparent',
-                  }}
-                >
+              <TableCell className="py-2.5 px-3 text-gray-700 dark:text-white">
+                {candidate.email}
+              </TableCell>
+              <TableCell className="py-2.5 px-3 text-center">
+                <span className="text-sm font-medium text-gray-700 dark:text-white">
+                  {candidate.role === "power_user" ? "Power User" : "User"}
+                </span>
+              </TableCell>
+              <TableCell className="py-2.5 px-3 text-center">
+                <span className="font-medium text-[#4F8FD7] dark:text-[#4F8FD7]">
                   {candidate.username}
                 </span>
-              </td>
-              <td className="py-3 px-6 text-center border-b-[3px] border-[#E5E9EF] dark:border-gray-600">
-                <div className="flex justify-center items-center gap-4">
-                  <button
-  onClick={() => {
-    setSelectedCandidate(candidate);
-    setIsDeleteModalOpen(true);
-  }}
-  className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transform hover:scale-105 hover:underline transition-all duration-200"
->
-  Delete
-</button>
-                  <button
+              </TableCell>
+              <TableCell className="py-2.5 px-3 text-center">
+                <div className="flex justify-center items-center gap-2">
+                  <Button
+                    variant="destructive"
+                    onClick={() => {
+                      setSelectedCandidate(candidate);
+                      setIsDeleteModalOpen(true);
+                    }}
+                    className="px-3 py-2 text-sm bg-red-500 text-white rounded-md hover:bg-red-600 focus:ring-2 focus:ring-red-500 transition-all duration-200 transform hover:scale-105"
+                  >
+                    Delete
+                  </Button>
+                  <Button
+  variant="secondary"
   onClick={() => handleShowDetails(candidate)}
-  className="px-4 py-2 bg-gray-800 text-white dark:bg-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-600 dark:hover:bg-gray-600 transform hover:scale-105 hover:underline transition-all duration-200"
+  className="px-3 py-2 text-sm bg-gray-800 text-white rounded-md hover:bg-gray-700 focus:ring-2 focus:ring-gray-500 transition-all duration-200 transform hover:scale-105 dark:bg-[#1F2937] dark:hover:bg-[#374151] dark:text-white dark:border dark:border-white"
 >
   Details
-</button>
-
+              </Button>
                 </div>
-              </td>
-            </tr>
+              </TableCell>
+            </TableRow>
           ))}
-        </tbody>
-      </table>
-    </div>
-  ) : (
-    <p className="p-4 text-center text-black dark:text-white">No candidates found.</p>
-  )}
-</div>
-
-      </main>
-      {/* History Modal */}
+        </TableBody>
+      </Table>
+    ) : (
+      <p className="p-4 text-center text-gray-800 dark:text-white">No candidates found.</p>
+    )}
+  </div>
+</main>
+  {/* History Modal */}
       {historyModalOpen && (
         <motion.div
           variants={modalVariant}
