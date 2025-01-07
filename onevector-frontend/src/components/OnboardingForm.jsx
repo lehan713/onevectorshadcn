@@ -11,13 +11,18 @@ import { Badge } from "@/components/ui/badge";
 import { CheckCircle, Circle } from "lucide-react";
 import { ChevronDownIcon } from '@heroicons/react/solid';
 import TalentHubImage from './images/talenthub.png';
-
+import { Eye, EyeOff } from "lucide-react";
 
 
 const OnboardingForm = () => {
     const navigate = useNavigate();
     const [step, setStep] = useState(1);
-    
+    const [showPassword, setShowPassword] = useState(false);
+const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+const [confirmPassword, setConfirmPassword] = useState('');
+const [passwordError, setPasswordError] = useState('');
+const [confirmPasswordError, setConfirmPasswordError] = useState('');
+
     // Personal Information States
     const [firstName, setFirstName] = useState('');
     const [lastName, setLastName] = useState('');
@@ -53,6 +58,7 @@ const OnboardingForm = () => {
     // New state to manage dropdown visibility
     const [isSkillsDropdownOpen, setIsSkillsDropdownOpen] = useState(false);
     const [isCertificationsDropdownOpen, setIsCertificationsDropdownOpen] = useState(false);
+    
 
     useEffect(() => {
         const fetchSkillsAndCertifications = async () => {
@@ -310,10 +316,62 @@ return (
                 <Label htmlFor="username">Username <span className="text-red-500">*</span></Label>
                 <Input id="username" value={username} onChange={(e) => setUsername(e.target.value)} required />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="password">Password <span className="text-red-500">*</span></Label>
-                <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
-              </div>
+              <div className="space-y-2 relative">
+  <Label htmlFor="password">Password <span className="text-red-500">*</span></Label>
+  <div className="relative">
+    <Input 
+      id="password" 
+      type={showPassword ? "text" : "password"}
+      value={password} 
+      onChange={(e) => {
+        const value = e.target.value;
+        if (!/^(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#$%^&*])(?=.{8,})/.test(value)) {
+          setPasswordError('Password must be at least 8 characters with 1 uppercase letter, 1 number, and 1 special character');
+        } else {
+          setPasswordError('');
+        }
+        setPassword(value);
+      }}
+      required 
+    />
+    <button
+      type="button"
+      onClick={() => setShowPassword(!showPassword)}
+      className="absolute right-3 top-1/2 -translate-y-1/2"
+    >
+      {showPassword ? <EyeOff className="h-4 w-4 text-gray-500" /> : <Eye className="h-4 w-4 text-gray-500" />}
+    </button>
+  </div>
+  {passwordError && <p className="text-sm text-red-500">{passwordError}</p>}
+</div>
+
+<div className="space-y-2 relative">
+  <Label htmlFor="confirmPassword">Confirm Password <span className="text-red-500">*</span></Label>
+  <div className="relative">
+    <Input
+      id="confirmPassword"
+      type={showConfirmPassword ? "text" : "password"}
+      value={confirmPassword}
+      onChange={(e) => {
+        setConfirmPassword(e.target.value);
+        if (e.target.value !== password) {
+          setConfirmPasswordError('Passwords do not match');
+        } else {
+          setConfirmPasswordError('');
+        }
+      }}
+      required
+    />
+    <button
+      type="button"
+      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+      className="absolute right-3 top-1/2 -translate-y-1/2"
+    >
+      {showConfirmPassword ? <EyeOff className="h-4 w-4 text-gray-500" /> : <Eye className="h-4 w-4 text-gray-500" />}
+    </button>
+  </div>
+  {confirmPasswordError && <p className="text-sm text-red-500">{confirmPasswordError}</p>}
+</div>
               <div className="space-y-2">
                 <Label htmlFor="firstName">First Name <span className="text-red-500">*</span></Label>
                 <Input id="firstName" value={firstName} onChange={(e) => setFirstName(e.target.value)} required />
