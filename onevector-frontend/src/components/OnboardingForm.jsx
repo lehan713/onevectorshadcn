@@ -107,7 +107,7 @@ const OnboardingForm = () => {
         formData.append('preferred_role_type', preferredRoleType);
         formData.append('preferred_work_arrangement', preferredWorkArrangement);
         formData.append('preferred_compensation_range', preferredCompensationRange);
-        formData.append('resume_path', resume);
+        formData.append('resume', resume);
   
         // Append selected skills and certifications
         selectedSkills.forEach(skill => formData.append('skills[]', skill));
