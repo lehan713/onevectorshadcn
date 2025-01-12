@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Home, ChevronRight, LogOut, Eye, Download, Edit2 } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { SkillsEditForm, CertificationsEditForm } from './EditSandC';
+import LoadingSpinner from './LoadingSpinner';
 
 
 
@@ -412,8 +413,13 @@ const recentJob = formData.qualifications.length > 0 ? formData.qualifications[0
   
 
          return (
-        <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      {/* Header Section */}
+<div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+          {loading ? (
+              <div className="flex items-center justify-center min-h-screen">
+                  <LoadingSpinner />
+              </div>
+          ) : (
+            <>      {/* Header Section */}
   <header
       className={cn(
         "fixed top-0 left-0 right-0 z-10 shadow-md",
@@ -922,8 +928,7 @@ const recentJob = formData.qualifications.length > 0 ? formData.qualifications[0
               key={index} 
               className="inline-flex items-center h-8 px-4 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-full text-sm border border-gray-300 dark:border-gray-600"
             >
-              {cert}
-            </div>
+              </div>
           ))}
         </div>
       )}
@@ -931,7 +936,12 @@ const recentJob = formData.qualifications.length > 0 ? formData.qualifications[0
   </div>
 </div>
 </div>
-</div>
-         );}
+ </>
+          )
+          }
+ </div>
+)
+}  
+
 
 export default CandidateDetails;
