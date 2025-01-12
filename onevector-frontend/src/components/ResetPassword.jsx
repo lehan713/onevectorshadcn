@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { KeyRound, EyeIcon, EyeOffIcon, CheckCircle2, XCircle } from "lucide-react";
+import oneVectorImage from './images/onevector.png';
 
 const ResetPassword = () => {
   const [searchParams] = useSearchParams();
@@ -39,7 +40,7 @@ const ResetPassword = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!isPasswordValid) {
       setError('Please ensure your password meets all requirements.');
       return;
@@ -86,19 +87,29 @@ const ResetPassword = () => {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-gray-800 to-black p-4">
       <Card className="w-full max-w-md bg-white/95 backdrop-blur-sm shadow-2xl rounded-xl overflow-hidden relative">
+        {/* Gradient header line */}
         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#15BACD] to-[#094DA2]" />
-        
-        <div className="flex flex-col items-center pt-8 pb-4">
-          <div className="rounded-full bg-gradient-to-r from-[#15BACD] to-[#094DA2] p-3 mb-4">
-            <KeyRound className="h-6 w-6 text-white" />
+
+        {/* Logo and Title */}
+        <CardHeader className="flex items-center justify-center space-y-4 py-6">
+          <div className="flex flex-col items-center">
+            <div className="flex items-center space-x-2 mb-2">
+              <img
+                src={oneVectorImage}
+                alt="OneVector Logo"
+                className="w-10 h-10"
+              />
+              <h1
+                className="text-3xl font-bold tracking-wide text-transparent bg-clip-text bg-gradient-to-r from-[#15BACD] to-[#094DA2]"
+              >
+                TalentHub
+              </h1>
+            </div>
+            <p className="text-gray-600 text-center">
+              Please enter your new password below
+            </p>
           </div>
-          <h1 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#15BACD] to-[#094DA2] mb-2">
-            Reset Your Password
-          </h1>
-          <p className="text-gray-600 text-center px-6 mb-6">
-            Please enter your new password below
-          </p>
-        </div>
+        </CardHeader>
 
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
@@ -152,7 +163,7 @@ const ResetPassword = () => {
                 className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#15BACD] focus:border-transparent transition-all duration-200"
               />
             </div>
-            
+
             <Button
               type="submit"
               disabled={!isPasswordValid}
