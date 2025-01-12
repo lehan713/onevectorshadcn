@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils";
 import { Toggle } from "@/components/ui/toggle";
 import {SunIcon, MoonIcon } from '@heroicons/react/solid';
 import { SkillsEditForm, CertificationsEditForm } from './EditSandC';
+import LoadingSpinner from './LoadingSpinner';
 
 
 function CandidateDetails() {
@@ -412,8 +413,13 @@ const recentJob = formData.qualifications.length > 0 ? formData.qualifications[0
   
 
          return (
-        <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      {/* Header Section */}
+          <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+          {loading ? (
+              <div className="flex items-center justify-center min-h-screen">
+                  <LoadingSpinner />
+              </div>
+          ) : (
+            <>
   {/* Header Section */}
   <header
       className={cn(
@@ -951,8 +957,12 @@ const recentJob = formData.qualifications.length > 0 ? formData.qualifications[0
   </div>
 </div>
 </div>
-</div>
-         );
-        }
+ </>
+          )
+          }
+ </div>
+)
+}  
+
 
 export default CandidateDetails;
