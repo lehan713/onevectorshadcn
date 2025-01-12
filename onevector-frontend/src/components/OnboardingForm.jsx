@@ -13,7 +13,7 @@ import { Eye, EyeOff } from "lucide-react";
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { CheckCircle2, AlertCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
-
+import LoadingSpinner from './LoadingSpinner';
 
 const OnboardingForm = () => {
     const navigate = useNavigate();
@@ -23,7 +23,7 @@ const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 const [confirmPassword, setConfirmPassword] = useState('');
 const [passwordError, setPasswordError] = useState('');
 const [confirmPasswordError, setConfirmPasswordError] = useState('');
-
+const [isLoading, setIsLoading] = useState(false);
     // Personal Information States
     const [firstName, setFirstName] = useState('');
     const [lastName, setLastName] = useState('');
@@ -62,19 +62,22 @@ const [confirmPasswordError, setConfirmPasswordError] = useState('');
     
 
     useEffect(() => {
-        const fetchSkillsAndCertifications = async () => {
-            try {
-                const skillsResponse = await axios.get('http://localhost:3000/api/skills');
-                setSkills(skillsResponse.data.map(skill => skill.skill_name));
-
-                const certificationsResponse = await axios.get('http://localhost:3000/api/certifications');
-                setCertifications(certificationsResponse.data.map(cert => cert.certification_name));
-            } catch (error) {
-                console.error('Error fetching skills and certifications:', error);
-            }
-        };
-
-        fetchSkillsAndCertifications();
+      const fetchSkillsAndCertifications = async () => {
+        setIsLoading(true);
+        try {
+          const skillsResponse = await axios.get('http://localhost:3000/api/skills');
+          setSkills(skillsResponse.data.map(skill => skill.skill_name));
+    
+          const certificationsResponse = await axios.get('http://localhost:3000/api/certifications');
+          setCertifications(certificationsResponse.data.map(cert => cert.certification_name));
+        } catch (error) {
+          console.error('Error fetching skills and certifications:', error);
+        } finally {
+          setIsLoading(false);
+        }
+      };
+    
+      fetchSkillsAndCertifications();
     }, []);
 
     useEffect(() => {
@@ -139,26 +142,22 @@ const [confirmPasswordError, setConfirmPasswordError] = useState('');
         }
   
         try {
-          // Post request with the form data
           const response = await axios.post('http://localhost:3000/api/submit-candidate', formData, {
             headers: {
               'Content-Type': 'multipart/form-data',
             },
-            
           });
           navigate('/success');
-          
-        /*  if (response.status === 200) {
-            // Redirect to success page
-            navigate('/success');
-          }*/
         } catch (error) {
           console.error('Error submitting the form:', error);
           alert('An error occurred while submitting the form. Please try again later.');
+        } finally {
+          setIsLoading(false); // Hide loader
         }
       }
     };
-  
+
+
     const handlePrevious = () => {
       if (step > 1) {
         setStep(step - 1);
@@ -253,6 +252,7 @@ const [confirmPasswordError, setConfirmPasswordError] = useState('');
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-100 p-4">
+          {isLoading && <LoadingSpinner />}
         {/* Updated Header Section */}
         <div className="flex items-center justify-center mb-6 space-x-4">
           <img 
