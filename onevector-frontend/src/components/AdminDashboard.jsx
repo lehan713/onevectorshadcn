@@ -10,7 +10,7 @@ import { FaCrown } from 'react-icons/fa';
 import oneVectorImage from './images/onevector.png'; 
 import MagicLinkHistoryPopup from './MagicLinkHistoryPopup';
 import * as XLSX from 'xlsx'; 
-import {DownloadIcon,SunIcon, MoonIcon, } from '@heroicons/react/solid';
+import {DownloadIcon,SunIcon, MoonIcon } from '@heroicons/react/solid';
 import { Button } from "@/components/ui/button"
 import { useTheme } from "../ThemeContext"; // Ensure correct import path
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -28,6 +28,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
+import LoadingSpinner from './LoadingSpinner'; // Add this import
 
 
 function AdminDashboard() {
@@ -51,6 +52,7 @@ function AdminDashboard() {
 
   const [showHistoryPopup, setShowHistoryPopup] = useState(false);
 const [magicLinks, setMagicLinks] = useState([]);
+const [isSendingMagicLink, setIsSendingMagicLink] = useState(false);
 const { isDarkMode, toggleTheme } = useTheme();
 
 const handleDownloadDetails = async () => {
@@ -226,37 +228,25 @@ useEffect(() => {
     }
   
     try {
-      // Send magic link to the email using Axios
+      setIsSendingMagicLink(true);
       const response = await axios.post('http://localhost:3000/api/send-magic-link', { email });
   
       if (response.status === 200) {
-        // Save email to localStorage after successful response
         localStorage.setItem('magicLinkEmail', email);
-  
-        // Add the sent email to history
         setSentEmails((prev) => [...prev, email]);
-  
-        // Clear email input field
         setEmail('');
-  
-        // Show success message
         setSuccessMessageText('Magic Link sent successfully!');
         setShowSuccessMessage(true);
-  
-        // Close the form modal
         setShowForm(false);
-  
-        // Auto-hide the success message after 3 seconds
         setTimeout(() => setShowSuccessMessage(false), 3000);
       } else {
         throw new Error('Failed to send magic link. Server error.');
       }
     } catch (error) {
-      // Detailed error logging for debugging
       console.error('Error sending magic link:', error);
-  
-      // Show an appropriate error message to the user
       alert(error.response?.data?.error || 'Failed to send magic link. Please try again.');
+    } finally {
+      setIsSendingMagicLink(false);
     }
   };
 
@@ -386,7 +376,7 @@ useEffect(() => {
 
   return (
     <div className={`min-h-screen ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'} font-sans`}>
-  {/* Magic Link Popup */}
+     {/* Magic Link Popup */}
   {showMagicLinkPopup && (
     <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-20">
       <Alert className="w-96 border-none bg-gradient-to-r from-emerald-500 to-green-500 text-white shadow-xl">
@@ -547,8 +537,12 @@ useEffect(() => {
     className="mr-2 cursor-pointer text-[#094DA2] transition-all duration-200 transform hover:scale-105 dark:text-[#094DA2] dark:hover:scale-110"
     onClick={fetchMagicLinks}
   />
+
+  
 </div>
 </div>
+
+
 
   {/* Magic Link History Popup */}
   {showHistoryPopup && (
@@ -558,12 +552,18 @@ useEffect(() => {
     />
   )}
 
+  
+
 {showForm && (
   <Dialog open={showForm} onOpenChange={(open) => setShowForm(open)}>
     <DialogTrigger asChild>
       <Button className="hidden">Open Modal</Button>
     </DialogTrigger>
-    <DialogContent className={`p-8 rounded-lg shadow-xl w-full md:w-96 ${isDarkMode ? 'bg-gray-800 text-gray-100' : 'bg-white text-black'}`}>
+    <DialogContent
+      className={`p-8 rounded-lg shadow-xl w-full md:w-96 ${
+        isDarkMode ? 'bg-gray-800 text-gray-100' : 'bg-white text-black'
+      }`}
+    >
       <DialogHeader>
         <DialogTitle className="text-2xl font-semibold mb-4">Add a New User</DialogTitle>
         <DialogDescription className="text-sm">Enter the email address of the new user.</DialogDescription>
@@ -574,17 +574,37 @@ useEffect(() => {
           placeholder="Email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className={`border p-3 rounded-lg placeholder-gray-400 focus:outline-none focus:ring-2 ${isDarkMode ? 'border-gray-600 bg-gray-700 text-gray-100 focus:ring-gray-500' : 'border-gray-300 focus:ring-black'}`}
+          className={`border p-3 rounded-lg placeholder-gray-400 focus:outline-none focus:ring-2 ${
+            isDarkMode
+              ? 'border-gray-600 bg-gray-700 text-gray-100 focus:ring-gray-500'
+              : 'border-gray-300 focus:ring-black'
+          }`}
         />
-        <Button
-          onClick={sendMagicLink}
-          className={`px-6 py-3 font-medium rounded-lg focus:outline-none focus:ring-2 ${isDarkMode ? 'bg-gradient-to-r from-[#094DA2] to-[#15abcd] text-gray-100 focus:ring-[#15abcd]' : 'bg-gradient-to-r from-[#15ABCD] to-[#094DA2] text-white focus:ring-[#094DA2]'} hover:opacity-90`}
-        >
-          Send Magic Link
-        </Button>
-        <Button
+         <Button
+              onClick={sendMagicLink}
+              className={`px-6 py-3 font-medium rounded-lg focus:outline-none focus:ring-2 ${
+                isDarkMode
+                  ? 'bg-gradient-to-r from-[#094DA2] to-[#15abcd] text-gray-100 focus:ring-[#15abcd]'
+                  : 'bg-gradient-to-r from-[#15ABCD] to-[#094DA2] text-white focus:ring-[#094DA2]'
+              } hover:opacity-90`}
+              disabled={isSendingMagicLink}
+            >
+              {isSendingMagicLink ? (
+                <div className="flex items-center justify-center space-x-2">
+                  <LoadingSpinner />
+                  <span>Sending...</span>
+                </div>
+              ) : (
+                'Send Magic Link'
+              )}
+            </Button>
+            <Button
           onClick={() => setShowForm(false)}
-          className={`px-6 py-3 rounded-lg ${isDarkMode ? 'bg-gray-600 text-gray-100 hover:bg-gray-700' : 'bg-gray-300 text-black hover:bg-gray-400'}`}
+          className={`px-6 py-3 rounded-lg ${
+            isDarkMode
+              ? 'bg-gray-600 text-gray-100 hover:bg-gray-700'
+              : 'bg-gray-300 text-black hover:bg-gray-400'
+          }`}
         >
           Close
         </Button>
@@ -592,14 +612,16 @@ useEffect(() => {
     </DialogContent>
   </Dialog>
 )}
-  <div className={`bg-white dark:bg-gray-800 shadow-md overflow-hidden mt-8 w-full`}>
-    {loading ? (
-      <div className="h-screen flex flex-col justify-center items-center">
-        {/* Loader (CSS spinner) */}
-        <div className="border-t-4 border-blue-500 border-solid w-12 h-12 rounded-full animate-spin"></div>
-      </div>
-    ) : filteredCandidates.length ? (
-      <Table className="w-full text-left border-collapse font-roboto-light">
+
+  {/* Table section with proper loading state */}
+  {loading ? (
+          <div className="flex justify-center items-center p-8">
+            <LoadingSpinner />
+          </div>
+        ) : (
+          <div className={`bg-white dark:bg-gray-800 shadow-md overflow-hidden mt-8 w-full`}>
+            {filteredCandidates.length ? (
+              <Table className="w-full text-left border-collapse font-roboto-light">
         <TableHeader className="bg-[#EAF3FF] text-white dark:bg-gray-800 dark:text-white">
           <TableRow>
             <TableHead className="py-4 px-6 text-sm font-bold text-black border-r-[2px] border-white dark:text-white dark:border-gray-700">
@@ -684,10 +706,12 @@ useEffect(() => {
           ))}
         </TableBody>
       </Table>
-    ) : (
+     ) : (
       <p className="p-4 text-center text-gray-800 dark:text-white">No candidates found.</p>
     )}
   </div>
+        )
+      }
 </main>
   {/* History Modal */}
       {historyModalOpen && (
