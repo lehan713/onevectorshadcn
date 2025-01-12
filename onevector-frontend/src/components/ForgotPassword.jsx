@@ -2,22 +2,23 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Lock } from "lucide-react";
+import LoadingSpinner from "./LoadingSpinner"; // Import the spinner
 import oneVectorImage from './images/onevector.png';
-
 
 const ForgotPassword = () => {
   const [email, setEmail] = useState('');
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false); // Loading state
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setLoading(true); // Start loading
     try {
       const response = await fetch('http://localhost:3000/api/forgot-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email })
+        body: JSON.stringify({ email }),
       });
       if (response.ok) {
         setMessage('A reset link has been sent to your email. Check your inbox for the next steps!');
@@ -28,6 +29,8 @@ const ForgotPassword = () => {
     } catch (error) {
       setError('Failed to send reset link. Please try again.');
       setMessage('');
+    } finally {
+      setLoading(false); // Stop loading
     }
   };
 
@@ -71,8 +74,9 @@ const ForgotPassword = () => {
             <Button
               type="submit"
               className="w-full py-3 bg-gradient-to-r from-[#15BACD] to-[#094DA2] text-white font-semibold rounded-lg hover:opacity-90 transition-all duration-200 transform hover:scale-[0.99] active:scale-[0.97]"
+              disabled={loading} // Disable button while loading
             >
-              Send Reset Instructions
+              {loading ? <LoadingSpinner /> : 'Send Reset Instructions'} {/* Show spinner or text */}
             </Button>
           </form>
         </CardContent>
