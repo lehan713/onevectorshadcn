@@ -2,13 +2,18 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { useLocation, Link } from 'react-router-dom';
 import { useNavigate } from 'react-router-dom';
-import { DocumentDownloadIcon } from '@heroicons/react/solid';
 import './CandidateDetails.css';
-import { EyeIcon } from '@heroicons/react/solid';
-import { FaBell, FaHistory, FaSignOutAlt } from 'react-icons/fa';
-import oneVectorImage from './images/onevector.png'; // Adjust the path based on your folder structure
-
+import oneVectorImage from './images/onevector.png';
+import * as XLSX from 'xlsx';
+import { saveAs } from 'file-saver';
+import { useTheme } from "../ThemeContext"; // Ensure correct import path
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Home, ChevronRight, LogOut, Eye, Download, Edit2 } from 'lucide-react';
+import { cn } from "@/lib/utils";
 import { jwtDecode } from 'jwt-decode';
+import { SkillsEditForm, CertificationsEditForm } from './EditSandC';
 
 
 
@@ -23,6 +28,7 @@ const id = decodedToken.id;
 
 
     const navigate = useNavigate();
+    const { isDarkMode, toggleTheme } = useTheme();
     const [details, setDetails] = useState(null);
     const [userDetails, setUserDetails] = useState(null); // Initially null or an empty object
     const [loading, setLoading] = useState(true);
@@ -44,10 +50,104 @@ const id = decodedToken.id;
     });
     const [resumeFile, setResumeFile] = useState(null); // For handling resume file upload
 
+     const [draftData, setDraftData] = useState({
+        personalDetails: {},
+        qualifications: [],
+        skills: [],
+        certifications: []
+    });
+
+        const [selectedSkills, setSelectedSkills] = useState([]);
+        const [selectedCertifications, setSelectedCertifications] = useState([]);
+        const [newSkill, setNewSkill] = useState('');
+        const [newCertification, setNewCertification] = useState('');
+        
+    const [skills, setSkills] = useState([]);
+    const [certifications, setCertifications] = useState([]);
+    
+        // New state to manage dropdown visibility
+        const [isSkillsDropdownOpen, setIsSkillsDropdownOpen] = useState(false);
+        const [isCertificationsDropdownOpen, setIsCertificationsDropdownOpen] = useState(false);
+
     useEffect(() => {
         fetchPersonalDetails(id);
       }, [id]);
     
+ // Prepare the data for Excel export
+      const handleDownloadDetails = () => {
+        // Prepare data for row-by-row export
+        const rowData = [
+            // Header Row
+            ['Candidate Details'],
+            [], // Empty row for spacing
+    
+            // Personal Details Section
+            ['Personal Details'],
+            ['Username', candidate.username || 'N/A'],
+            ['First Name', formData.personalDetails?.first_name || 'N/A'],
+            ['Last Name', formData.personalDetails?.last_name || 'N/A'],
+            ['Phone Number', formData.personalDetails?.phone_no || 'N/A'],
+            ['City', formData.personalDetails?.city || 'N/A'],
+            ['State', formData.personalDetails?.state || 'N/A'],
+            ['Postal Code', formData.personalDetails?.postal_code || 'N/A'],
+            ['Address', formData.personalDetails?.address_line1 || 'N/A'],
+            ['LinkedIn URL', formData.personalDetails?.linkedin_url || 'N/A'],
+            [], // Empty row for separation
+    
+            // Qualifications Section
+            ['Qualifications'],
+        ...formData.qualifications.flatMap((qual) => [
+            ['Recent Job', qual.recent_job || 'N/A'],
+            ['Preferred Roles', qual.preferred_roles || 'N/A'],
+            ['Availability', qual.availability || 'N/A'],
+            ['Compensation', qual.compensation || 'N/A'],
+            ['Preferred Role Type', qual.preferred_role_type || 'N/A'],
+            ['Preferred Work Arrangement', qual.preferred_work_arrangement || 'N/A'],
+            [] // Empty row between qualification sets
+        ]),
+    
+            // Skills Section
+            ['Skills', formData.skills.join(', ') || 'N/A'],
+            [], // Empty row for separation
+    
+            // Certifications Section
+            
+            ['Certifications', formData.certifications.join(', ') || 'N/A']
+        ];
+    
+        // Create workbook and worksheet
+        const workbook = XLSX.utils.book_new();
+        const worksheet = XLSX.utils.aoa_to_sheet(rowData);
+    
+        // Style for header rows
+        const headerStyle = {
+            font: { bold: true, color: { rgb: "FFFFFF" } },
+            fill: { fgColor: { rgb: "4472C4" } }
+        };
+    
+        // Apply styling to section headers
+        ['A1', 'A3', 'A12', 'A24', 'A26'].forEach(cell => {
+            if (worksheet[cell]) {
+                worksheet[cell].s = headerStyle;
+            }
+        });
+    
+        // Adjust column widths
+        worksheet['!cols'] = [
+            { wch: 30 },  // First column
+            { wch: 50 }   // Second column
+        ];
+    
+        // Add the worksheet to the workbook
+        XLSX.utils.book_append_sheet(workbook, worksheet, 'Candidate Details');
+    
+        // Generate Excel file
+        const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+        
+        // Create and save the file
+        const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        saveAs(blob, `${candidate.username}_details.xlsx`);
+    };
 
     const fetchPersonalDetails = async (id) => {
         try {
@@ -67,6 +167,45 @@ const id = decodedToken.id;
             setLoading(false);
         }
     };
+
+    useEffect(() => {
+      const fetchSkillsAndCertifications = async () => {
+          try {
+              const skillsResponse = await axios.get('http://localhost:3000/api/skills');
+              setSkills(skillsResponse.data.map(skill => skill.skill_name));
+    
+              const certificationsResponse = await axios.get('http://localhost:3000/api/certifications');
+              setCertifications(certificationsResponse.data.map(cert => cert.certification_name));
+          } catch (error) {
+              console.error('Error fetching skills and certifications:', error);
+          }
+      };
+    
+      fetchSkillsAndCertifications();
+    }, []);
+
+    const toggleSkillsDropdown = () => {
+      setIsSkillsDropdownOpen(!isSkillsDropdownOpen);
+    };
+    
+    const toggleCertificationsDropdown = () => {
+      setIsCertificationsDropdownOpen(!isCertificationsDropdownOpen);
+    };
+    
+    const handleSkillSelect = (skill) => {
+      if (!selectedSkills.includes(skill)) {
+          setSelectedSkills([...selectedSkills, skill]);
+      }
+      setIsSkillsDropdownOpen(false); // Close the dropdown after selection
+    };
+    
+    const handleCertificationSelect = (certification) => {
+      if (!selectedCertifications.includes(certification)) {
+          setSelectedCertifications([...selectedCertifications, certification]);
+      }
+      setIsCertificationsDropdownOpen(false); // Close the dropdown after selection
+    };
+    
 
     useEffect(() => {
       const fetchCandidates = async () => {
@@ -143,129 +282,162 @@ const id = decodedToken.id;
   };
 
 
-    const handleEditToggle = (section) => {
-      setIsEditing((prevState) => ({
-        ...prevState,
-        [section]: !prevState[section],
-      }));
-    };
-    const handleLogout = () => {
-      localStorage.removeItem('token');
-      navigate('/');
-    };
-    const handleChange = (e) => {
-      const { name, value } = e.target;
-  
-      // Handling qualification fields
-      if (name.startsWith('qualification_')) {
-          const [, index, field] = name.split('_'); // Extract index and field
-  
-          setFormData((prev) => {
-              const updatedQualifications = [...(prev.qualifications || [])];
+  const handleEditToggle = (section) => {
+    console.log('Toggling edit mode for section:', section);
+    console.log('Current editing state:', isEditing);
+    
+    if (!isEditing[section]) {
+        setDraftData({
+            ...draftData,
+            [section]: section === 'personalDetails'
+                ? { ...formData.personalDetails }
+                : [...formData[section]]
+        });
+    }
+    
+    setIsEditing(prevState => {
+        const newState = {
+            ...prevState,
+            [section]: !prevState[section]
+        };
+        console.log('New editing state:', newState);
+        return newState;
+    });
+  };
+  // Update handleChange to modify draft data instead of actual data
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    
+    if (name.startsWith('personalDetails.')) {
+        const field = name.split('.')[1];
+        setDraftData(prev => ({
+            ...prev,
+            personalDetails: {
+                ...prev.personalDetails,
+                [field]: value
+            }
+        }));
+    } else if (name.startsWith('qualification_')) {
+          const [, index, field] = name.split('_');
+          setDraftData(prev => {
+              const updatedQualifications = [...prev.qualifications];
               if (!updatedQualifications[index]) {
-                  updatedQualifications[index] = {}; // Initialize if undefined
+                  updatedQualifications[index] = {};
               }
-  
-              // Make sure the field exists and update the value
               updatedQualifications[index] = {
                   ...updatedQualifications[index],
-                  [field]: value,
+                  [field]: value
               };
+              return {
+                  ...prev,
+                  qualifications: updatedQualifications
+              };
+          });
+      }
+  };
   
-              return { ...prev, qualifications: updatedQualifications };
-          });
-      }
-      // Handling skills fields
-      else if (name.startsWith('skill_')) {
-          const index = name.split('_')[1];
-          setFormData((prev) => {
-              const updatedSkills = [...prev.skills];
-              updatedSkills[index] = value;
-              return { ...prev, skills: updatedSkills };
-          });
-      }
-      // Handling certifications fields
-      else if (name.startsWith('certification_')) {
-          const index = name.split('_')[1];
-          setFormData((prev) => {
-              const updatedCertifications = [...prev.certifications];
-              updatedCertifications[index] = value;
-              return { ...prev, certifications: updatedCertifications };
-          });
-      }
-      // Handling other fields like personal details
-       else if (name.startsWith('personalDetails_')) {
-    const field = name.split('_')[1]; // Extract field from name
-
-    setFormData((prev) => ({
-      ...prev,
-      personalDetails: {
-        ...prev.personalDetails,
-        [field]: value, // Update the personal details field
-      },
-    }));
-  }
-      else {
-          setFormData((prev) => ({
-              ...prev,
-              personalDetails: {
-                  ...prev.personalDetails,
-                  [name]: value,
-              },
-          }));
-      }
-  };  
-
+  
 const recentJob = formData.qualifications.length > 0 ? formData.qualifications[0].recent_job : 'No Recent Job';
 
   
 
-    const handleSubmit = async (e, section) => {
-        e.preventDefault();
-        try {
-            const id = details.personalDetails.id;
+const handleSubmit = async (e, section) => {
+  e.preventDefault();
+  if (!details?.personalDetails?.id) {
+      setError('No ID found for update');
+      return;
+  }
 
-            // Create a FormData object to handle file uploads
-            const formDataToSubmit = new FormData();
-            if (section === 'personal') {
-                // Append all personal details to formData
-                Object.keys(formData.personalDetails).forEach(key => {
-                    formDataToSubmit.append(key, formData.personalDetails[key]);
-                });
-                // If there's a new resume file, append it as well
-                if (resumeFile) {
-                    formDataToSubmit.append('resume', resumeFile);
-                }
+  try {
+      const id = details.personalDetails.id;
+      const formDataToSubmit = new FormData();
 
-                await axios.put(`http://localhost:3000/api/candidates/${id}/personal`, formDataToSubmit, {
-                    headers: {
-                        'Content-Type': 'multipart/form-data',
-                    }
+      switch (section) {
+          case 'personalDetails':
+              Object.entries(draftData.personalDetails).forEach(([key, value]) => {
+                  formDataToSubmit.append(key, value);
+              });
+              if (resumeFile) {
+                  formDataToSubmit.append('resume', resumeFile);
+              }
+              await axios.put(`http://localhost:3000/api/candidates/${id}/personal`, formDataToSubmit, {
+                  headers: { 'Content-Type': 'multipart/form-data' }
+              });
+              // Update actual data after successful submit
+              setFormData(prev => ({
+                  ...prev,
+                  personalDetails: draftData.personalDetails
+              }));
+              break;
+
+          case 'qualifications':
+              await axios.put(`http://localhost:3000/api/candidates/${id}/qualifications`, {
+                  qualifications: draftData.qualifications
+              });
+              // Update actual data after successful submit
+              setFormData(prev => ({
+                  ...prev,
+                  qualifications: draftData.qualifications
+              }));
+              break;
+            case 'skills':
+                await axios.put(`http://localhost:3000/api/candidates/${id}/skills`, {
+                    skills: formData.skills
                 });
-                // Fetch updated details after submission
-                fetchPersonalDetails(id);
-                handleEditToggle(section); // Close the edit form
-            } else if (section === 'qualifications') {
-                // Assuming qualifications is an array and you want to update each one
-                for (const qualification of formData.qualifications) {
-                    await axios.put(`http://localhost:3000/api/candidates/${id}/qualifications`, qualification);
-                }
-                fetchPersonalDetails(id); // Fetch updated details after submission
-                handleEditToggle(section); // Close the edit form
-            
-            } else if (section === 'skills') {
-                await axios.put(`http://localhost:3000/api/candidates/${id}/skills`, { skills: formData.skills });
-                fetchPersonalDetails(id); // Fetch updated details after submission
-                handleEditToggle(section); // Close the edit form
-            } else if (section === 'certifications') {
-                await axios.put(`http://localhost:3000/api/candidates/${id}/certifications`, { certifications: formData.certifications });
-                fetchPersonalDetails(id); // Fetch updated details after submission
-                handleEditToggle(section); // Close the edit form
-            }
-        } catch (error) {
-            alert('Failed to update details: ' + (error.response?.data?.error || 'Unknown error'));
+                break;
+
+            case 'certifications':
+                await axios.put(`http://localhost:3000/api/candidates/${id}/certifications`, {
+                    certifications: formData.certifications
+                });
+                break;
         }
-    };
+        handleEditToggle(section);
+  } catch (err) {
+      setError(`Failed to update ${section}: ${err.message}`);
+  }
+  };
+
+  const handleAddSkill = () => {
+    if (newSkill.trim()) {
+      setFormData({
+        ...formData,
+        skills: [...formData.skills, newSkill.trim()]
+      });
+      setNewSkill('');
+    }
+  };
+  
+  const handleRemoveSkill = (index) => {
+    const newSkills = formData.skills.filter((_, i) => i !== index);
+    setFormData({
+      ...formData,
+      skills: newSkills
+    });
+  };
+  
+  const handleAddCertification = () => {
+    if (newCertification.trim()) {
+      setFormData({
+        ...formData,
+        certifications: [...formData.certifications, newCertification.trim()]
+      });
+      setNewCertification('');
+    }
+  };
+  
+  const handleRemoveCertification = (index) => {
+    const newCertifications = formData.certifications.filter((_, i) => i !== index);
+    setFormData({
+      ...formData,
+      certifications: newCertifications
+    });
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    navigate('/');
+  };
 
     if (loading) {
         return <p className="text-center">Loading candidate details...</p>;
@@ -279,563 +451,500 @@ const recentJob = formData.qualifications.length > 0 ? formData.qualifications[0
         return <p className="text-center">No personal details found.</p>;
     }
 
-    const { personalDetails, qualifications, skills, certifications } = details;
     return (
 
-      <div className="min-h-screen bg-white text-black font-sans">
-
-        
- {/* Navbar */}
- <header className="fixed top-0 left-0 right-0 bg-white shadow-md z-10">
-  <div className="flex justify-between items-center p-4">
-    {/* Logo and Title on the left */}
-    <div className="flex items-center space-x-3">
-    <img src={oneVectorImage} alt="OneVector Logo" className="w-[30px] h-[40px]" />
-    </div>
-    <h1 className="text-2xl font-normal text-gray-800 tracking-wide">
-        TalentHub
-      </h1>
-    {/* Buttons on the right */}
-    <div className="flex items-center space-x-6">
-      <button
-        onClick={handleLogout}
-        className="px-4 py-2 bg-red-500 text-white rounded-lg flex items-center space-x-2 hover:bg-red-400"
-      >
-        <FaSignOutAlt size={14} />
-        <span>Logout</span>
-      </button>
-    </div>
-  </div>
-</header>
-
-
-<div>
-  {/* Candidate Details Section */}
-  <div className="bg-white rounded-lg p-6 mx-4 mb-0 mt-14 relative">
-    {/* Bottom Border */}
-    <div className="border-b-0 py-4 flex items-center justify-between">
-      {/* Candidate Name and Recent Job (Designation) */}
-      <div className="flex items-center">
-        {/* Candidate Name */}
-        <h1 className="text-3xl font-serif text-black truncate ml-4">{`${formData?.personalDetails?.first_name || ''} ${formData?.personalDetails?.last_name || ''}`.trim() || 'N/A'}</h1>
-        
-        {/* Recent Job (Job Designation in Brackets) */}
-        <p className="text-base text-gray-500 font-medium ml-2 mt-1">
-          <span className="font-semibold text-gray-700">({recentJob || 'N/A'})</span>
-        </p>
-      </div>
-
-      {/* View Resume Button */}
-      <button
-        onClick={handleDownloadResume}
-        className="px-4 py-2 text-white font-medium rounded-lg bg-gradient-to-r from-[#15abcd] to-[#094DA2] hover:opacity-90 transition duration-300 flex items-center ml-auto"
-      >
-        <EyeIcon className="h-5 w-5 mr-2" />
-        View Resume
-      </button>
-    </div>
-
-{/* Personal Details Layout */}
-<div className="w-full px-4 space-y-5">
-  <div className="flex flex-col space-y-4">
-    <div className="min-h-[0px]">
-      {/* Header */}
-      <div className="max-w-full mx-auto flex justify-between items-center mb-2 mt-4 relative">
-        <h2 className="text-lg font-serif text-black truncate">Personal Details</h2>
-        <button
-          onClick={() => handleEditToggle('personal')}
-          className="text-[#72757F] hover:text-[#505257] transition duration-300"
-        >
-          <i className="fas fa-edit text-lg" />
-        </button>
-        <div className="absolute bottom-[-6px] left-0 w-full border-b border-gray-300" />
-      </div>
-
-      {/* Personal Details Content */}
-      <div className="p-4 rounded-lg bg-white">
-        {isEditing.personal ? (
-          <form onSubmit={(e) => handleSubmit(e, 'personal')}>
-            {/* Editable Fields */}
-            <div className="grid grid-cols-4 gap-x-8 gap-y-4">
-              <div className="flex flex-col">
-                <label className="text-sm font-medium text-gray-700">Username</label>
-                <input
-                  type="text"
-                  name="username"
-                  value={candidate.username || ''}
-                  onChange={handleChange}
-                  className="border border-gray-300 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#72757F]"
-                />
-              </div>
-              <div className="flex flex-col">
-                <label className="text-sm font-medium text-gray-700">Phone Number</label>
-                <input
-                  type="text"
-                  name="phone_no"
-                  value={formData.personalDetails?.phone_no || ''}
-                  onChange={handleChange}
-                  className="border border-gray-300 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#72757F]"
-                />
-              </div>
-              <div className="flex flex-col">
-                <label className="text-sm font-medium text-gray-700">City</label>
-                <input
-                  type="text"
-                  name="city"
-                  value={formData.personalDetails?.city || ''}
-                  onChange={handleChange}
-                  className="border border-gray-300 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#72757F]"
-                />
-              </div>
-              <div className="flex flex-col">
-                <label className="text-sm font-medium text-gray-700">State</label>
-                <input
-                  type="text"
-                  name="state"
-                  value={formData.personalDetails?.state || ''}
-                  onChange={handleChange}
-                  className="border border-gray-300 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#72757F]"
-                />
-              </div>
-              <div className="flex flex-col">
-                <label className="text-sm font-medium text-gray-700">Postal Code</label>
-                <input
-                  type="text"
-                  name="postal_code"
-                  value={formData.personalDetails?.postal_code || ''}
-                  onChange={handleChange}
-                  className="border border-gray-300 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#72757F]"
-                />
-              </div>
-              <div className="flex flex-col">
-                <label className="text-sm font-medium text-gray-700">Address</label>
-                <input
-                  type="text"
-                  name="address_line1"
-                  value={formData.personalDetails?.address_line1 || ''}
-                  onChange={handleChange}
-                  className="border border-gray-300 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#72757F]"
-                />
-              </div>
-              <div className="flex flex-col">
-                <label className="text-sm font-medium text-gray-700">LinkedIn URL</label>
-                <input
-                  type="text"
-                  name="linkedin_url"
-                  value={formData.personalDetails?.linkedin_url || ''}
-                  onChange={handleChange}
-                  className="border border-gray-300 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#72757F]"
-                />
-              </div>
-              <div className="flex flex-col">
-                <label className="text-sm font-medium text-gray-700">Resume</label>
-                <input
-                  type="file"
-                  name="resume"
-                  onChange={handleResumeChange}
-                  className="border border-gray-300 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#72757F]"
-                />
-              </div>
-            </div>
-            {/* Actions */}
-            <div className="flex justify-end mt-4 space-x-2">
-              <button
-                type="submit"
-                className="px-4 py-2 bg-[#72757F] text-white rounded-md hover:bg-[#505257] transition duration-300"
-              >
-                Save Changes
-              </button>
-              <button
-                type="button"
-                onClick={() => handleEditToggle('personal')}
-                className="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 transition duration-300"
-              >
-                Cancel
-              </button>
-            </div>
-          </form>
-        ) : (
-          <div className="grid grid-cols-4 gap-x-8 gap-y-4">
-            {[
-              ['Username',candidates.username || 'N/A'],
-              ['Phone Number', formData.personalDetails?.phone_no || 'N/A'],
-              ['City', formData.personalDetails?.city || 'N/A'],
-              ['State', formData.personalDetails?.state || 'N/A'],
-              ['Postal Code', formData.personalDetails?.postal_code || 'N/A'],
-              ['Address', formData.personalDetails?.address_line1 || 'N/A'],
-              ['LinkedIn URL', formData.personalDetails?.linkedin_url ? (
-                <div className="flex items-center">
-                  <a
-                    href={formData.personalDetails.linkedin_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-sm text-gray-600 font-light hover:text-black hover:text-sm transition-all duration-300"
-                  >
-                    {formData.personalDetails.linkedin_url}
-                  </a>
-                  <i className="fas fa-link ml-2 text-gray-600 hover:text-black hover:text-base transition-all duration-300"></i>
-                </div>
-              ) : 'N/A'],
-              ['Resume', formData.personalDetails?.resume_path || 'N/A'],
-            ].map(([label, value], index) => (
-              <div key={index} className="flex flex-col">
-                <label className="text-base font-medium text-black">{label}</label>
-                <p className="text-sm text-gray-600 font-light">{value}</p>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
-
-
-
-
-    <div className="flex-1 min-h-[0px]">
-  {/* Qualifications Section */}
-  <div className="max-w-full mx-auto mr-1 mb-10">
-    {/* Qualifications Header (outside the box) */}
-    <div className="flex justify-between items-center mb-3 relative">
-      <h2 className="text-lg font-serif text-black truncate">Qualifications</h2>
-      <button
-          onClick={() => handleEditToggle('qualifications')}
-          className="text-[#72757F] hover:text-[#505257] transition duration-300"
-        >
-          <i className="fas fa-edit text-lg" />
-        </button>
-      {/* Underline effect */}
-      <span className="absolute bottom-[-10px] left-0 w-full border-b border-gray-300" />
-    </div>
-
-    {/* Qualifications Content Box */}
-    <div className="bg-white p-4 rounded-lg mb-4">
-      {isEditing.qualifications ? (
-        <form onSubmit={(e) => handleSubmit(e, 'qualifications')} className="space-y-4">
-          {formData.qualifications.map((qual, index) => (
-            <div key={index} className="space-y-5">
-              {/* Grid layout for qualifications with 4 columns */}
-              <div className="grid grid-cols-4 gap-x-4 gap-y-4 text-gray-700">
-                {/* Recent Job */}
-                <div className="text-left">
-                  <label
-                    htmlFor={`qualification_${index}_recent_job`}
-                    className="block text-sm font-medium text-black mb-1"
-                  >
-                    Recent Job
-                  </label>
-                  <input
-                    type="text"
-                    name={`qualification_${index}_recent_job`}
-                    value={qual.recent_job || ''}
-                    onChange={handleChange}
-                    className="block w-full p-2 bg-gray-100 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#72757F] transition duration-200 text-gray-700 text-sm"
-                    placeholder="Recent Job"
-                  />
-                </div>
-
-                {/* Preferred Role */}
-                <div className="text-left">
-                  <label
-                    htmlFor={`qualification_${index}_preferred_roles`}
-                    className="block text-sm font-medium text-black mb-1"
-                  >
-                    Preferred Role
-                  </label>
-                  <input
-                    type="text"
-                    name={`qualification_${index}_preferred_roles`}
-                    value={qual.preferred_roles || ''}
-                    onChange={handleChange}
-                    className="block w-full p-2 bg-gray-100 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#72757F] transition duration-200 text-gray-700 text-sm"
-                    placeholder="Preferred Role"
-                  />
-                </div>
-
-                {/* Availability */}
-                <div className="text-left">
-                  <label
-                    htmlFor={`qualification_${index}_availability`}
-                    className="block text-sm font-medium text-black mb-1"
-                  >
-                    Availability
-                  </label>
-                  <input
-                    type="text"
-                    name={`qualification_${index}_availability`}
-                    value={qual.availability || ''}
-                    onChange={handleChange}
-                    className="block w-full p-2 bg-gray-100 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#72757F] transition duration-200 text-gray-700 text-sm"
-                    placeholder="Availability"
-                  />
-                </div>
-
-                {/* Compensation (only once here) */}
-                <div className="text-left">
-                  <label
-                    htmlFor={`qualification_${index}_compensation`}
-                    className="block text-sm font-medium text-black mb-1"
-                  >
-                    Compensation
-                  </label>
-                  <input
-                    type="text"
-                    name={`qualification_${index}_compensation`}
-                    value={qual.compensation || ''}
-                    onChange={handleChange}
-                    className="block w-full p-2 bg-gray-100 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#72757F] transition duration-200 text-gray-700 text-sm"
-                    placeholder="Compensation"
-                  />
-                </div>
-              </div>
-
-              {/* Additional Details */}
-              <div className="grid grid-cols-4 gap-x-4 gap-y-4 text-gray-700">
-                {/* Preferred Role Type */}
-                <div className="text-left">
-                  <label
-                    htmlFor={`qualification_${index}_preferred_role_type`}
-                    className="block text-sm font-medium text-black mb-1"
-                  >
-                    Preferred Role Type
-                  </label>
-                  <input
-                    type="text"
-                    name={`qualification_${index}_preferred_role_type`}
-                    value={qual.preferred_role_type || ''}
-                    onChange={handleChange}
-                    className="block w-full p-2 bg-gray-100 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#72757F] transition duration-200 text-gray-700 text-sm"
-                    placeholder="Preferred Role Type"
-                  />
-                </div>
-
-                {/* Preferred Work Arrangement */}
-                <div className="text-left">
-                  <label
-                    htmlFor={`qualification_${index}_preferred_work_arrangement`}
-                    className="block text-sm font-medium text-black mb-1"
-                  >
-                    Preferred Work Type
-                  </label>
-                  <input
-                    type="text"
-                    name={`qualification_${index}_preferred_work_arrangement`}
-                    value={qual.preferred_work_arrangement || ''}
-                    onChange={handleChange}
-                    className="block w-full p-2 bg-gray-100 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#72757F] transition duration-200 text-gray-700 text-sm"
-                    placeholder="Preferred Work Arrangement"
-                  />
-                </div>
-
-                {/* Compensation field removed here */}
-              </div>
-            </div>
-          ))}
-
-          {/* Actions */}
-          <div className="flex justify-end mt-4 space-x-3">
-            <button
-              type="submit"
-              className="px-4 py-2 bg-gray-800 text-white rounded-md hover:bg-gray-700 transition duration-300 text-sm"
-            >
-              Save Changes
-            </button>
-            <button
-              type="button"
-              onClick={() => handleEditToggle('qualifications')}
-              className="px-4 py-2 bg-gray-400 text-white rounded-md hover:bg-gray-500 transition duration-300 text-sm"
-            >
-              Cancel
-            </button>
-          </div>
-        </form>
-      ) : (
-        <div>
-          {qualifications.length > 0 ? (
-            qualifications.map((qual, index) => (
-              <div key={index} className="space-y-5">
-                <div className="grid grid-cols-4 gap-x-4 gap-y-2 text-base text-gray-700">
-                  <div className="text-left">
-                    <strong className="text-base font-medium text-black">Recent Job</strong>
-                    <p>{qual.recent_job || 'N/A'}</p>
-                  </div>
-                  <div className="text-left">
-                    <strong className="text-base font-medium text-black">Preferred Role</strong>
-                    <p>{qual.preferred_roles || 'N/A'}</p>
-                  </div>
-                  <div className="text-left">
-                    <strong className="text-base font-medium text-black">Availability</strong>
-                    <p>{qual.availability || 'N/A'}</p>
-                  </div>
-                  <div className="text-left">
-                    <strong className="text-base font-medium text-black">Compensation</strong>
-                    <p>{qual.compensation || 'N/A'}</p>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-4 gap-x-4 gap-y-2 text-base text-gray-700">
-                  <div className="text-left">
-                    <strong className="text-base font-medium text-black">Preferred Role Type</strong>
-                    <p>{qual.preferred_role_type || 'N/A'}</p>
-                  </div>
-                  <div className="text-left">
-                    <strong className="text-base font-medium text-black">Preferred Work Type</strong>
-                    <p>{qual.preferred_work_arrangement || 'N/A'}</p>
-                  </div>
-                </div>
-              </div>
-            ))
-          ) : (
-            <p className="text-sm text-gray-500">No qualifications available.</p>
-          )}
-        </div>
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      {/* Header Section */}
+  <header
+      className={cn(
+        "fixed top-0 left-0 right-0 z-10 shadow-md",
+        isDarkMode ? "bg-gray-800" : "bg-white"
       )}
-    </div>
+    >
+      <div className="flex justify-between items-center p-4 w-full">
+  {/* Logo and Title (left-aligned) */}
+  <div className="flex items-center space-x-2">
+    <img
+      src={oneVectorImage}
+      alt="OneVector Logo"
+      className="w-5 h-6 md:w-10 md:h-10"
+    />
+    <h1
+      className={cn(
+        "text-3xl font-semibold tracking-wide",
+        isDarkMode
+          ? "text-transparent bg-clip-text bg-gradient-to-r from-[#15BACD] to-[#094DA2]"
+          : "text-transparent bg-clip-text bg-gradient-to-r from-[#15BACD] to-[#094DA2]"
+      )}
+    >
+      TalentHub
+    </h1>
   </div>
-</div>
-</div>
-    
-<div className="flex flex-wrap gap-8 min-h-[100px] ">
-  {/* Skills Section */}
-  <div className="flex-1 min-h-[0px]">
-    {/* Skills Header */}
-    <div className="max-w-[900px] mx-auto flex justify-between items-center mb-4 -mt-8 relative">
-      <h2 className="text-lg font-serif text-black truncate">Skills</h2>
-      <button
-          onClick={() => handleEditToggle('skills')}
-          className="text-[#72757F] hover:text-[#505257] transition duration-300"
-        >
-          <i className="fas fa-edit text-lg" />
-        </button>
-      {/* Underline line */}
-      <div className="absolute bottom-[-9px] left-0 w-full border-b-[2px] border-gray-300" />
-    </div>
 
-    <div className="p-6 rounded-lg flex items-center justify-between min-h-[200px]">
-      {isEditing.skills ? (
-        <form onSubmit={(e) => handleSubmit(e, 'skills')} className="w-full">
-          <input
-            type="text"
-            name="skills"
-            value={formData.skills.join(', ')}
-            onChange={(e) =>
-              setFormData({
-                ...formData,
-                skills: e.target.value.split(',').map((skill) => skill.trim()),
-              })
-            }
-            className="border rounded-md p-2 w-full bg-gray-100"
-            placeholder="Enter skills separated by commas"
-          />
-          <div className="flex justify-center mt-4">
-            <button
-              type="submit"
-              className="px-4 py-2 bg-black text-white rounded-md hover:bg-gray-800 transition duration-300"
+          {/* Logout Button */}
+          <Button
+            variant="outline"
+            onClick={handleLogout}
+            className={cn(
+              "px-6 py-2 h-12 rounded-full flex items-center justify-center space-x-3 font-semibold text-base transition-all",
+              isDarkMode
+                ? "bg-gradient-to-r from-red-500 to-red-700 text-white hover:from-red-600 hover:to-red-800"
+                : "bg-gradient-to-r from-red-400 to-red-600 text-white hover:from-red-500 hover:to-red-700"
+            )}
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth="1.5"
+              stroke="currentColor"
+              className="w-6 h-6"
             >
-              Save Changes
-            </button>
-            <button
-              type="button"
-              onClick={() => handleEditToggle('skills')}
-              className="ml-2 px-4 py-2 bg-gray-400 text-white rounded-md hover:bg-gray-500 transition duration-300"
-            >
-              Cancel
-            </button>
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-7.5A2.25 2.25 0 003.75 5.25v13.5A2.25 2.25 0 006 21h7.5a2.25 2.25 0 002.25-2.25V15"
+              />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M18 12H9m0 0l3-3m-3 3l3 3"
+              />
+            </svg>
+            <span>Logout</span>
+          </Button>
+        </div>
+    </header>
+  
+      {/* Main Content */}
+      <div className="px-6 py-12">
+        {/* Profile Header */}
+        <div className="bg-gradient-to-r from-[#15BACD] to-[#094DA2] p-8 rounded-lg mt-12">
+          <div className="flex justify-between items-center">
+            <div>
+              <h2 className="text-3xl font-bold text-white">
+                {`${formData?.personalDetails?.first_name || ''} ${formData?.personalDetails?.last_name || ''}`.trim() || 'N/A'}
+              </h2>
+              <p className="text-xl text-gray-100 mt-2">
+                {formData.qualifications?.[0]?.recent_job || 'No Recent Job'}
+              </p>
+            </div>
+            <div className="flex space-x-4">
+              <Button 
+                className="bg-white hover:bg-gray-100 text-[#094DA2] font-medium"
+                onClick={handleDownloadResume}
+              >
+                <Eye className="h-5 w-5 mr-2" />
+                View Resume
+              </Button>
+              <Button 
+                className="bg-white hover:bg-gray-100 text-[#094DA2] font-medium"
+                onClick={handleDownloadDetails}
+              >
+                <Download className="h-5 w-5 mr-2" />
+                Download Details
+              </Button>
+            </div>
           </div>
-        </form>
-      ) : (
-        <div className="flex justify-between w-full">
-          <div className="grid grid-cols-2 gap-4 w-full"> {/* 2 columns for skills */}
-            {skills.length > 0 ? (
-              skills.map((skill, index) => (
-                <div
-                  key={index}
-                  className="px-4 py-2 text-[#4A4A4A] font-medium  border rounded-full border-black flex items-center justify-center"
-                  style={{ maxWidth: '7rem' }}
-                >
-                  {skill}
+        </div>
+
+        {/* Personal Details Section */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg mb-6">
+          <div className="border-b border-gray-200 dark:border-gray-700 p-6">
+            <div className="flex justify-between items-center">
+              <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Personal Details</h3>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => handleEditToggle('personal')}
+                className="border-[#15BACD] text-[#15BACD] hover:bg-[#15BACD] hover:text-white transition-colors"
+              >
+                <Edit2 className="h-4 w-4 mr-2" />
+                Edit Details
+              </Button>
+            </div>
+          </div>
+          
+          <div className="p-6">
+            {isEditing.personal ? (
+              <form onSubmit={(e) => handleSubmit(e, 'personal')}>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                  <div className="space-y-2">
+                    <Label className="text-gray-700 dark:text-gray-300">Phone Number</Label>
+                    <Input
+                      name="phone_no"
+                      value={formData.personalDetails?.phone_no || ''}
+                      onChange={handleChange}
+                      className="border-gray-300 dark:border-gray-600 focus:border-[#15BACD] focus:ring-[#15BACD]"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-gray-700 dark:text-gray-300">Country</Label>
+                    <Input
+                      name="country"
+                      value={formData.personalDetails?.country || ''}
+                      onChange={handleChange}
+                      className="border-gray-300 dark:border-gray-600 focus:border-[#15BACD] focus:ring-[#15BACD]"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-gray-700 dark:text-gray-300">City</Label>
+                    <Input
+                      name="city"
+                      value={formData.personalDetails?.city || ''}
+                      onChange={handleChange}
+                      className="border-gray-300 dark:border-gray-600 focus:border-[#15BACD] focus:ring-[#15BACD]"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-gray-700 dark:text-gray-300">State</Label>
+                    <Input
+                      name="state"
+                      value={formData.personalDetails?.state || ''}
+                      onChange={handleChange}
+                      className="border-gray-300 dark:border-gray-600 focus:border-[#15BACD] focus:ring-[#15BACD]"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-gray-700 dark:text-gray-300">Postal Code</Label>
+                    <Input
+                      name="postal_code"
+                      value={formData.personalDetails?.postal_code || ''}
+                      onChange={handleChange}
+                      className="border-gray-300 dark:border-gray-600 focus:border-[#15BACD] focus:ring-[#15BACD]"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-gray-700 dark:text-gray-300">Address</Label>
+                    <Input
+                      name="address_line1"
+                      value={formData.personalDetails?.address_line1 || ''}
+                      onChange={handleChange}
+                      className="border-gray-300 dark:border-gray-600 focus:border-[#15BACD] focus:ring-[#15BACD]"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-gray-700 dark:text-gray-300">LinkedIn URL</Label>
+                    <Input
+                      name="linkedin_url"
+                      value={formData.personalDetails?.linkedin_url || ''}
+                      onChange={handleChange}
+                      className="border-gray-300 dark:border-gray-600 focus:border-[#15BACD] focus:ring-[#15BACD]"
+                    />
+                  </div>
                 </div>
-              ))
+                <div className="flex justify-end space-x-3 mt-6">
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    onClick={() => handleEditToggle('personal')}
+                    className="border-gray-300 text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+                  >
+                    Cancel
+                  </Button>
+                  <Button 
+                    type="submit"
+                    className="bg-gradient-to-r from-[#15BACD] to-[#094DA2] text-white hover:opacity-90"
+                  >
+                    Save Changes
+                  </Button>
+                </div>
+              </form>
             ) : (
-              <p className="text-[#989AA1]">No skills available.</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div className="space-y-2">
+                  <Label className="text-sm text-gray-500 dark:text-gray-400">Username</Label>
+                  <p className="font-medium text-[#343636] dark:text-white">{candidate.username || 'N/A'}</p>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm text-gray-500 dark:text-gray-400">Phone Number</Label>
+                  <p className="text-[#343636] dark:text-white font-medium">{formData.personalDetails?.phone_no || 'N/A'}</p>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm text-gray-500 dark:text-gray-400">Country</Label>
+                  <p className="text-[#343636] dark:text-white font-medium">{formData.personalDetails?.country || 'N/A'}</p>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm text-gray-500 dark:text-gray-400">City</Label>
+                  <p className="text-[#343636] dark:text-white font-medium">{formData.personalDetails?.city || 'N/A'}</p>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm text-gray-500 dark:text-gray-400">State</Label>
+                  <p className="text-[#343636] dark:text-white font-medium">{formData.personalDetails?.state || 'N/A'}</p>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm text-gray-500 dark:text-gray-400">Postal Code</Label>
+                  <p className="text-[#343636] dark:text-white font-medium">{formData.personalDetails?.postal_code || 'N/A'}</p>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm text-gray-500 dark:text-gray-400">Address</Label>
+                  <p className="text-[#343636] dark:text-white font-medium">{formData.personalDetails?.address_line1 || 'N/A'}</p>
+                </div>
+                <div className="space-y-2">
+  <Label className="text-sm text-gray-500 dark:text-gray-400">LinkedIn URL</Label>
+  {formData.personalDetails?.linkedin_url ? (
+    <a
+      href={formData.personalDetails.linkedin_url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="block truncate text-black dark:text-white font-medium underline"
+      title={formData.personalDetails.linkedin_url}
+    >
+      {formData.personalDetails.linkedin_url}
+    </a>
+  ) : (
+    <p className="text-gray-900 dark:text-white font-medium">N/A</p>
+  )}
+</div>
+
+              </div>
             )}
           </div>
+        </div>
+
+        <div className="bg-white dark:bg-gray-800 rounded-lg mb-6">
+  <div className="border-b border-gray-200 dark:border-gray-700 p-6">
+    <div className="flex justify-between items-center">
+      <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Qualifications</h3>
+      <Button 
+        variant="outline" 
+        size="sm" 
+        onClick={() => handleEditToggle('qualifications')}
+        className="border-[#15BACD] text-[#15BACD] hover:bg-[#15BACD] hover:text-white transition-colors"
+      >
+        <Edit2 className="h-4 w-4 mr-2" />
+        Edit Details
+      </Button>
+    </div>
+  </div>
+
+  <div className="p-6">
+    {isEditing.qualifications ? (
+      <form onSubmit={(e) => handleSubmit(e, 'qualifications')}>
+        {formData.qualifications.map((qual, index) => (
+          <div key={index} className="space-y-6 mb-6">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+              <div className="space-y-2">
+                <Label>Recent Job</Label>
+                <Input
+                  name={`qualification_${index}_recent_job`}
+                  value={qual.recent_job || ''}
+                  onChange={handleChange}
+                  className="border-gray-300 focus:border-[#15BACD] focus:ring-[#15BACD]"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Preferred Role</Label>
+                <Input
+                  name={`qualification_${index}_preferred_roles`}
+                  value={qual.preferred_roles || ''}
+                  onChange={handleChange}
+                  className="border-gray-300 focus:border-[#15BACD] focus:ring-[#15BACD]"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Availability</Label>
+                <Input
+                  name={`qualification_${index}_availability`}
+                  value={qual.availability || ''}
+                  onChange={handleChange}
+                  className="border-gray-300 focus:border-[#15BACD] focus:ring-[#15BACD]"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Compensation</Label>
+                <Input
+                  name={`qualification_${index}_compensation`}
+                  value={qual.compensation || ''}
+                  onChange={handleChange}
+                  className="border-gray-300 focus:border-[#15BACD] focus:ring-[#15BACD]"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Preferred Role Type</Label>
+                <Input
+                  name={`qualification_${index}_preferred_role_type`}
+                  value={qual.preferred_role_type || ''}
+                  onChange={handleChange}
+                  className="border-gray-300 focus:border-[#15BACD] focus:ring-[#15BACD]"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Preferred Work Type</Label>
+                <Input
+                  name={`qualification_${index}_preferred_work_arrangement`}
+                  value={qual.preferred_work_arrangement || ''}
+                  onChange={handleChange}
+                  className="border-gray-300 focus:border-[#15BACD] focus:ring-[#15BACD]"
+                />
+              </div>
+              <div className="space-y-2 col-span-2 md:col-start-3 md:col-end-4">
+  <Label>Resume</Label>
+    <Input
+    type="file"
+    name={`qualification_${index}_resume`}
+    onChange={(e) => handleResumeChange(e, index)}
+    className="block mt-2"
+  />
+</div>
+            </div>
+          </div>
+        ))}
+        <div className="flex justify-end space-x-3 mt-6">
+          <Button 
+            type="button" 
+            variant="outline" 
+            onClick={() => handleEditToggle('qualifications')}
+            className="border-gray-300 text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+          >
+            Cancel
+          </Button>
+          <Button 
+            type="submit"
+            className="bg-gradient-to-r from-[#15BACD] to-[#094DA2] text-white hover:opacity-90"
+          >
+            Save Changes
+          </Button>
+        </div>
+      </form>
+    ) : (
+      <div className="space-y-6">
+        {formData.qualifications.map((qual, index) => (
+          <div key={index} className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div className="space-y-2">
+              <Label className="text-sm text-gray-500 dark:text-gray-400">Recent Job</Label>
+              <p className="text-gray-900 dark:text-white font-medium">{qual.recent_job || 'N/A'}</p>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-sm text-gray-500 dark:text-gray-400">Preferred Role</Label>
+              <p className="text-gray-900 dark:text-white font-medium">{qual.preferred_roles || 'N/A'}</p>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-sm text-gray-500 dark:text-gray-400">Availability</Label>
+              <p className="text-gray-900 dark:text-white font-medium">{qual.availability || 'N/A'}</p>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-sm text-gray-500 dark:text-gray-400">Compensation</Label>
+              <p className="text-gray-900 dark:text-white font-medium">{qual.compensation || 'N/A'}</p>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-sm text-gray-500 dark:text-gray-400">Preferred Role Type</Label>
+              <p className="text-gray-900 dark:text-white font-medium">{qual.preferred_role_type || 'N/A'}</p>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-sm text-gray-500 dark:text-gray-400">Preferred Work Type</Label>
+              <p className="text-gray-900 dark:text-white font-medium">{qual.preferred_work_arrangement || 'N/A'}</p>
+            </div>
+            <div className="space-y-2 col-span-2 md:col-start-3 md:col-end-4">
+              <Label className="text-sm text-gray-500 dark:text-gray-400">Resume</Label>
+                <p className="text-sm text-gray-600 dark:text-gray-400">{formData.personalDetails?.resume_path || 'No resume uploaded'}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+    )}
+  </div>
+</div>
+
+
+{/* Skills and Certifications Grid */}
+<div className="grid md:grid-cols-2 gap-8">
+  {/* Skills Section */}
+  <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+    <div className="border-b border-gray-200 dark:border-gray-700 p-6">
+      <div className="flex justify-between items-center">
+        <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Skills</h3>
+        <Button 
+        variant="outline" 
+        size="sm" 
+        onClick={() => handleEditToggle('skills')}
+        className="border-[#15BACD] text-[#15BACD] hover:bg-[#15BACD] hover:text-white transition-colors"
+      >
+        <Edit2 className="h-4 w-4 mr-2" />
+        Edit Skills
+      </Button>
+      </div>
+    </div>
+    
+    <div className="p-6">
+    {isEditing.skills ? (
+  <SkillsEditForm
+    handleSubmit={handleSubmit}
+    newSkill={newSkill}
+    setNewSkill={setNewSkill}
+    formData={formData}
+    setFormData={setFormData}
+    handleRemoveSkill={handleRemoveSkill}
+    handleEditToggle={handleEditToggle}
+    details={details}
+    skills={skills}
+    isSkillsDropdownOpen={isSkillsDropdownOpen}
+    setIsSkillsDropdownOpen={setIsSkillsDropdownOpen}
+  />
+) : (
+        <div className="flex flex-wrap gap-2">
+          {formData.skills.map((skill, index) => (
+            <div
+              key={index} 
+              className="inline-flex items-center h-8 px-4 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-full text-sm border border-gray-300 dark:border-gray-600"
+            >
+              {skill}
+            </div>
+          ))}
         </div>
       )}
     </div>
   </div>
 
   {/* Certifications Section */}
-<div className="flex-1 min-h-[0px]">
-  {/* Certifications Header */}
-  <div className="max-w-[900px] mx-auto flex justify-between items-center mb-4 -mt-8 relative">
-    <h2 className="text-lg font-serif text-black truncate">Certifications</h2>
-    <button
-          onClick={() => handleEditToggle('certifications')}
-          className="text-[#72757F] hover:text-[#505257] transition duration-300"
-        >
-          <i className="fas fa-edit text-lg" />
-        </button>
-    {/* Underline line */}
-    <div className="absolute bottom-[-9px] left-0 w-full border-b-[2px] border-gray-300" />
+  <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+    <div className="border-b border-gray-200 dark:border-gray-700 p-6">
+      <div className="flex justify-between items-center">
+        <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Certifications</h3>
+        <Button 
+        variant="outline" 
+        size="sm" 
+        onClick={() => handleEditToggle('certifications')}
+        className="border-[#15BACD] text-[#15BACD] hover:bg-[#15BACD] hover:text-white transition-colors"
+      >
+        <Edit2 className="h-4 w-4 mr-2" />
+        Edit Certifications
+      </Button>
+      </div>
     </div>
-
-  <div className="p-6 rounded-lg flex items-center justify-between min-h-[200px]">
+    
+     <div className="p-6">
     {isEditing.certifications ? (
-      <form onSubmit={(e) => handleSubmit(e, 'certifications')} className="w-full">
-        <input
-          type="text"
-          name="certifications"
-          value={formData.certifications.join(', ')}
-          onChange={(e) =>
-            setFormData({
-              ...formData,
-              certifications: e.target.value.split(',').map((cert) => cert.trim()),
-            })
-          }
-          className="border rounded-md p-2 w-full bg-gray-100"
-          placeholder="Enter certifications separated by commas"
-        />
-        <div className="flex justify-center mt-4">
-          <button
-            type="submit"
-            className="px-4 py-2 bg-black text-white rounded-md hover:bg-gray-800 transition duration-300"
-          >
-            Save Changes
-          </button>
-          <button
-            type="button"
-            onClick={() => handleEditToggle('certifications')}
-            className="ml-2 px-4 py-2 bg-gray-400 text-white rounded-md hover:bg-gray-500 transition duration-300"
-          >
-            Cancel
-          </button>
-        </div>
-      </form>
-    ) : (
-      <div className="grid grid-cols-3 grid-rows-2 gap-4 w-full">
-        {certifications.length > 0 ? (
-          certifications.slice(0, 6).map((cert, index) => (
+  <CertificationsEditForm
+    handleSubmit={handleSubmit}
+    newCertification={newCertification}
+    setNewCertification={setNewCertification}
+    formData={formData}
+    setFormData={setFormData}
+    handleRemoveCertification={handleRemoveCertification}
+    handleEditToggle={handleEditToggle}
+    details={details}
+    certifications={certifications}
+    isCertificationsDropdownOpen={isCertificationsDropdownOpen}
+    setIsCertificationsDropdownOpen={setIsCertificationsDropdownOpen}
+  />
+) : (
+        <div className="flex flex-wrap gap-2">
+          {formData.certifications.map((cert, index) => (
             <div
-              key={index}
-              className="text-sm font-bold uppercase text-[#4A4A4A] text-center p-2"
+              key={index} 
+              className="inline-flex items-center h-8 px-4 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-full text-sm border border-gray-300 dark:border-gray-600"
             >
               {cert}
             </div>
-          ))
-        ) : (
-          <p className="col-span-3 text-center text-gray-500">No certifications available.</p>
-        )}
-      </div>
-    )}
+          ))}
+        </div>
+      )}
+    </div>
   </div>
 </div>
-
 </div>
 </div>
-</div>
-        </div>
-        </div>
-    );
-};
+         );}
 
 export default CandidateDetails;
