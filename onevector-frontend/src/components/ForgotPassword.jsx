@@ -3,6 +3,8 @@ import { Card, CardContent, CardHeader, CardFooter } from "@/components/ui/card"
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Lock } from "lucide-react";
+import oneVectorImage from './images/onevector.png';
+
 
 const ForgotPassword = () => {
   const [email, setEmail] = useState('');
@@ -33,14 +35,21 @@ const ForgotPassword = () => {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-gray-800 to-black p-4">
       <Card className="w-full max-w-md bg-white/95 backdrop-blur-sm shadow-2xl rounded-xl overflow-hidden relative">
         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#15BACD] to-[#094DA2]" />
-        
+
+        {/* Logo and Title */}
         <div className="flex flex-col items-center pt-8 pb-4">
-          <div className="rounded-full bg-gradient-to-r from-[#15BACD] to-[#094DA2] p-3 mb-4">
-            <Lock className="h-6 w-6 text-white" />
+          <div className="flex items-center space-x-2 mb-4">
+            <img
+              src={oneVectorImage}
+              alt="OneVector Logo"
+              className="w-6 h-8 md:w-10 md:h-10"
+            />
+            <h1
+              className="text-2xl md:text-3xl font-medium tracking-wide text-transparent bg-clip-text bg-gradient-to-r from-[#15BACD] to-[#094DA2]"
+            >
+              TalentHub
+            </h1>
           </div>
-          <h1 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#15BACD] to-[#094DA2] mb-2">
-            Forgot Password?
-          </h1>
           <p className="text-gray-600 text-center px-6 mb-6">
             No worries! Enter your email address and we'll send you instructions to reset your password.
           </p>
@@ -58,7 +67,7 @@ const ForgotPassword = () => {
                 className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#15BACD] focus:border-transparent transition-all duration-200"
               />
             </div>
-            
+
             <Button
               type="submit"
               className="w-full py-3 bg-gradient-to-r from-[#15BACD] to-[#094DA2] text-white font-semibold rounded-lg hover:opacity-90 transition-all duration-200 transform hover:scale-[0.99] active:scale-[0.97]"
