@@ -4,8 +4,9 @@ import { Card, CardContent, CardHeader, CardFooter } from "@/components/ui/card"
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { KeyRound, EyeIcon, EyeOffIcon, CheckCircle2, XCircle } from "lucide-react";
+import { EyeIcon, EyeOffIcon, CheckCircle2, XCircle } from "lucide-react";
 import oneVectorImage from './images/onevector.png';
+import LoadingSpinner from './LoadingSpinner'; // Import the spinner
 
 const ResetPassword = () => {
   const [searchParams] = useSearchParams();
@@ -22,15 +23,14 @@ const ResetPassword = () => {
     hasNumber: false,
     hasSpecial: false
   });
+  const [isLoading, setIsLoading] = useState(false); // Loading state
 
-  const validatePassword = (password) => {
-    return {
-      minLength: password.length >= 8,
-      hasUpperCase: /[A-Z]/.test(password),
-      hasNumber: /[0-9]/.test(password),
-      hasSpecial: /[!@#$%^&*(),.?":{}|<>]/.test(password)
-    };
-  };
+  const validatePassword = (password) => ({
+    minLength: password.length >= 8,
+    hasUpperCase: /[A-Z]/.test(password),
+    hasNumber: /[0-9]/.test(password),
+    hasSpecial: /[!@#$%^&*(),.?":{}|<>]/.test(password)
+  });
 
   useEffect(() => {
     setValidations(validatePassword(newPassword));
@@ -51,6 +51,7 @@ const ResetPassword = () => {
       return;
     }
 
+    setIsLoading(true); // Start loading
     try {
       const response = await fetch('http://localhost:3000/api/reset-password', {
         method: 'POST',
@@ -68,6 +69,8 @@ const ResetPassword = () => {
     } catch (error) {
       setError('Failed to reset password. Please try again.');
       setMessage('');
+    } finally {
+      setIsLoading(false); // Stop loading
     }
   };
 
@@ -112,66 +115,72 @@ const ResetPassword = () => {
         </CardHeader>
 
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="space-y-4">
-              <div className="relative">
+          {isLoading ? (
+            <div className="flex justify-center py-6">
+              <LoadingSpinner />
+            </div>
+          ) : (
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="space-y-4">
+                <div className="relative">
+                  <Input
+                    type={showPassword ? "text" : "password"}
+                    placeholder="Enter new password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    required
+                    className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#15BACD] focus:border-transparent transition-all duration-200"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                  >
+                    {showPassword ? 
+                      <EyeOffIcon className="h-5 w-5" /> : 
+                      <EyeIcon className="h-5 w-5" />
+                    }
+                  </button>
+                </div>
+
+                <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+                  <ValidationItem 
+                    isValid={validations.minLength} 
+                    text="Minimum 8 characters" 
+                  />
+                  <ValidationItem 
+                    isValid={validations.hasUpperCase} 
+                    text="At least one uppercase letter" 
+                  />
+                  <ValidationItem 
+                    isValid={validations.hasNumber} 
+                    text="At least one number" 
+                  />
+                  <ValidationItem 
+                    isValid={validations.hasSpecial} 
+                    text="At least one special character" 
+                  />
+                </div>
+
                 <Input
                   type={showPassword ? "text" : "password"}
-                  placeholder="Enter new password"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="Confirm new password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
                   required
                   className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#15BACD] focus:border-transparent transition-all duration-200"
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                >
-                  {showPassword ? 
-                    <EyeOffIcon className="h-5 w-5" /> : 
-                    <EyeIcon className="h-5 w-5" />
-                  }
-                </button>
               </div>
 
-              <div className="bg-gray-50 p-4 rounded-lg space-y-2">
-                <ValidationItem 
-                  isValid={validations.minLength} 
-                  text="Minimum 8 characters" 
-                />
-                <ValidationItem 
-                  isValid={validations.hasUpperCase} 
-                  text="At least one uppercase letter" 
-                />
-                <ValidationItem 
-                  isValid={validations.hasNumber} 
-                  text="At least one number" 
-                />
-                <ValidationItem 
-                  isValid={validations.hasSpecial} 
-                  text="At least one special character" 
-                />
-              </div>
-
-              <Input
-                type={showPassword ? "text" : "password"}
-                placeholder="Confirm new password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                required
-                className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#15BACD] focus:border-transparent transition-all duration-200"
-              />
-            </div>
-
-            <Button
-              type="submit"
-              disabled={!isPasswordValid}
-              className={`w-full py-3 bg-gradient-to-r from-[#15BACD] to-[#094DA2] text-white font-semibold rounded-lg transition-all duration-200 transform hover:scale-[0.99] active:scale-[0.97] ${!isPasswordValid ? 'opacity-50 cursor-not-allowed' : 'hover:opacity-90'}`}
-            >
-              Reset Password
-            </Button>
-          </form>
+              <Button
+                type="submit"
+                disabled={!isPasswordValid}
+                className={`w-full py-3 bg-gradient-to-r from-[#15BACD] to-[#094DA2] text-white font-semibold rounded-lg transition-all duration-200 transform hover:scale-[0.99] active:scale-[0.97] ${!isPasswordValid ? 'opacity-50 cursor-not-allowed' : 'hover:opacity-90'}`}
+              >
+                Reset Password
+              </Button>
+            </form>
+          )}
         </CardContent>
 
         {message && (
