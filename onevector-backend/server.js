@@ -912,6 +912,87 @@ app.get('/api/user/info/email', async (req, res) => {
   }
 });
 
+// Endpoint to get complete profile of logged-in user
+app.get('/api/user/profile', authenticateJWT, async (req, res) => {
+  try {
+    const userId = req.user.id; // Get user ID from JWT token
+
+    // Fetch user basic info
+    const [userInfo] = await pool.execute(
+      'SELECT username, email, role FROM users WHERE id = ?',
+      [userId]
+    );
+
+    if (userInfo.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Fetch personal details
+    const [personalDetails] = await pool.execute(
+      `SELECT first_name, last_name, phone_no, address_line1, address_line2, 
+              city, state, country, postal_code, linkedin_url, resume_path 
+       FROM personaldetails 
+       WHERE id = ?`,
+      [userId]
+    );
+
+    // Fetch qualifications
+    const [qualifications] = await pool.execute(
+      `SELECT recent_job, preferred_roles, availability, work_permit_status, 
+              preferred_role_type, preferred_work_arrangement, compensation 
+       FROM qualifications 
+       WHERE id = ?`,
+      [userId]
+    );
+
+    // Fetch skills
+    const [skills] = await pool.execute(
+      `SELECT s.skill_name 
+       FROM user_skills us 
+       JOIN skills s ON us.skill_id = s.skill_id 
+       WHERE us.id = ?`,
+      [userId]
+    );
+
+    // Fetch certifications
+    const [certifications] = await pool.execute(
+      `SELECT c.certification_name 
+       FROM user_certifications uc 
+       JOIN certifications c ON uc.certification_id = c.certification_id 
+       WHERE uc.id = ?`,
+      [userId]
+    );
+
+    // Construct the complete user profile
+    const userProfile = {
+      ...userInfo[0],
+      personalDetails: personalDetails[0] || null,
+      qualifications: qualifications[0] || null,
+      skills: skills.map(skill => skill.skill_name),
+      certifications: certifications.map(cert => cert.certification_name)
+    };
+
+    // If resume path exists, generate a pre-signed URL
+    if (userProfile.personalDetails && userProfile.personalDetails.resume_path) {
+      const resumePath = userProfile.personalDetails.resume_path;
+      const key = resumePath.split('onevectortalenthub.s3.ap-south-1.amazonaws.com/')[1];
+      
+      const params = {
+        Bucket: process.env.S3_BUCKET_NAME,
+        Key: key,
+        Expires: 3600 // URL expires in 1 hour
+      };
+
+      userProfile.personalDetails.resumeUrl = s3.getSignedUrl('getObject', params);
+    }
+
+    res.json(userProfile);
+  } catch (error) {
+    console.error('Error fetching user profile:', error);
+    res.status(500).json({ error: 'Failed to fetch user profile' });
+  }
+});
+
 // API to update logged-in user's information by email
 app.put('/api/user/info/email', upload, async (req, res) => {
   const { email } = req.query;
