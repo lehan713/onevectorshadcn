@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Home, ChevronRight, LogOut, Eye, Download, Edit2 } from 'lucide-react';
 import { cn } from "@/lib/utils";
+import { SkillsEditForm, CertificationsEditForm } from './EditSandC';
 
 
 
@@ -29,8 +30,17 @@ function CandidateDetails() {
         skills: false,
         certifications: false
     });
-    const [newSkill, setNewSkill] = useState('');
-const [newCertification, setNewCertification] = useState('');
+    const [skills, setSkills] = useState([]);
+        const [certifications, setCertifications] = useState([]);
+        const [selectedSkills, setSelectedSkills] = useState([]);
+        const [selectedCertifications, setSelectedCertifications] = useState([]);
+        const [newSkill, setNewSkill] = useState('');
+        const [newCertification, setNewCertification] = useState('');
+        
+    
+        // New state to manage dropdown visibility
+        const [isSkillsDropdownOpen, setIsSkillsDropdownOpen] = useState(false);
+        const [isCertificationsDropdownOpen, setIsCertificationsDropdownOpen] = useState(false);
 
     const [formData, setFormData] = useState({
         personalDetails: {},
@@ -61,6 +71,22 @@ useEffect(() => {
         fetchPersonalDetails(candidate.id);
     }
 }, [candidate]);
+
+useEffect(() => {
+  const fetchSkillsAndCertifications = async () => {
+      try {
+          const skillsResponse = await axios.get('http://localhost:3000/api/skills');
+          setSkills(skillsResponse.data.map(skill => skill.skill_name));
+
+          const certificationsResponse = await axios.get('http://localhost:3000/api/certifications');
+          setCertifications(certificationsResponse.data.map(cert => cert.certification_name));
+      } catch (error) {
+          console.error('Error fetching skills and certifications:', error);
+      }
+  };
+
+  fetchSkillsAndCertifications();
+}, []);
 
 const fetchPersonalDetails = async (id) => {
     try {
@@ -106,6 +132,30 @@ const handleEditToggle = (section) => {
       return newState;
   });
 };
+
+const toggleSkillsDropdown = () => {
+  setIsSkillsDropdownOpen(!isSkillsDropdownOpen);
+};
+
+const toggleCertificationsDropdown = () => {
+  setIsCertificationsDropdownOpen(!isCertificationsDropdownOpen);
+};
+
+const handleSkillSelect = (skill) => {
+  if (!selectedSkills.includes(skill)) {
+      setSelectedSkills([...selectedSkills, skill]);
+  }
+  setIsSkillsDropdownOpen(false); // Close the dropdown after selection
+};
+
+const handleCertificationSelect = (certification) => {
+  if (!selectedCertifications.includes(certification)) {
+      setSelectedCertifications([...selectedCertifications, certification]);
+  }
+  setIsCertificationsDropdownOpen(false); // Close the dropdown after selection
+};
+
+
 // Update handleChange to modify draft data instead of actual data
 const handleChange = (e) => {
   const { name, value } = e.target;
@@ -804,67 +854,21 @@ const recentJob = formData.qualifications.length > 0 ? formData.qualifications[0
     </div>
     
     <div className="p-6">
-      {isEditing.skills ? (
-        <form onSubmit={(e) => handleSubmit(e, 'skills')}>
-          <div className="space-y-4">
-            <div className="flex gap-2">
-              <Input
-                type="text"
-                value={newSkill}
-                onChange={(e) => setNewSkill(e.target.value)}
-                placeholder="Enter a skill"
-                className="border-gray-300 dark:border-gray-600"
-              />
-              <Button 
-                type="button" 
-                onClick={handleAddSkill}
-                className="bg-gray-900 text-white hover:bg-gray-800 dark:bg-gray-700 dark:hover:bg-gray-600"
-              >
-                Add
-              </Button>
-            </div>
-            <div className="flex flex-wrap gap-2 min-h-[100px] border border-gray-200 dark:border-gray-700 rounded-lg p-4">
-              {formData.skills.map((skill, index) => (
-                <div 
-                  key={index} 
-                  className="inline-flex items-center h-8 px-4 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-full text-sm border border-gray-300 dark:border-gray-600"
-                >
-                  {skill}
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveSkill(index)}
-                    className="ml-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-                  >
-                    ×
-                  </button>
-                </div>
-              ))}
-            </div>
-            <div className="flex justify-end space-x-3">
-              <Button 
-                type="button" 
-                variant="outline" 
-                onClick={() => {
-                  setFormData(prevState => ({
-                    ...prevState,
-                    skills: details.skills || []
-                  }));
-                  handleEditToggle('skills');
-                }}
-                className="border-gray-300 text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
-              >
-                Cancel
-              </Button>
-              <Button 
-                type="submit"
-                className="bg-gray-900 text-white hover:bg-gray-800 dark:bg-gray-700 dark:hover:bg-gray-600"
-              >
-                Save Changes
-              </Button>
-            </div>
-          </div>
-        </form>
-      ) : (
+    {isEditing.skills ? (
+  <SkillsEditForm
+    handleSubmit={handleSubmit}
+    newSkill={newSkill}
+    setNewSkill={setNewSkill}
+    formData={formData}
+    setFormData={setFormData}
+    handleRemoveSkill={handleRemoveSkill}
+    handleEditToggle={handleEditToggle}
+    details={details}
+    skills={skills}
+    isSkillsDropdownOpen={isSkillsDropdownOpen}
+    setIsSkillsDropdownOpen={setIsSkillsDropdownOpen}
+  />
+) : (
         <div className="flex flex-wrap gap-2">
           {formData.skills.map((skill, index) => (
             <div
@@ -897,67 +901,21 @@ const recentJob = formData.qualifications.length > 0 ? formData.qualifications[0
     </div>
     
     <div className="p-6">
-      {isEditing.certifications ? (
-        <form onSubmit={(e) => handleSubmit(e, 'certifications')}>
-          <div className="space-y-4">
-            <div className="flex gap-2">
-              <Input
-                type="text"
-                value={newCertification}
-                onChange={(e) => setNewCertification(e.target.value)}
-                placeholder="Enter a certification"
-                className="border-gray-300 dark:border-gray-600"
-              />
-              <Button 
-                type="button" 
-                onClick={handleAddCertification}
-                className="bg-gray-900 text-white hover:bg-gray-800 dark:bg-gray-700 dark:hover:bg-gray-600"
-              >
-                Add
-              </Button>
-            </div>
-            <div className="flex flex-wrap gap-2 min-h-[100px] border border-gray-200 dark:border-gray-700 rounded-lg p-4">
-              {formData.certifications.map((cert, index) => (
-                <div 
-                  key={index} 
-                  className="inline-flex items-center h-8 px-4 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-full text-sm border border-gray-300 dark:border-gray-600"
-                >
-                  {cert}
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveCertification(index)}
-                    className="ml-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-                  >
-                    ×
-                  </button>
-                </div>
-              ))}
-            </div>
-            <div className="flex justify-end space-x-3">
-              <Button 
-                type="button" 
-                variant="outline" 
-                onClick={() => {
-                  setFormData(prevState => ({
-                    ...prevState,
-                    certifications: details.certifications || []
-                  }));
-                  handleEditToggle('certifications');
-                }}
-                className="border-gray-300 text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
-              >
-                Cancel
-              </Button>
-              <Button 
-                type="submit"
-                className="bg-gray-900 text-white hover:bg-gray-800 dark:bg-gray-700 dark:hover:bg-gray-600"
-              >
-                Save Changes
-              </Button>
-            </div>
-          </div>
-        </form>
-      ) : (
+    {isEditing.certifications ? (
+  <CertificationsEditForm
+    handleSubmit={handleSubmit}
+    newCertification={newCertification}
+    setNewCertification={setNewCertification}
+    formData={formData}
+    setFormData={setFormData}
+    handleRemoveCertification={handleRemoveCertification}
+    handleEditToggle={handleEditToggle}
+    details={details}
+    certifications={certifications}
+    isCertificationsDropdownOpen={isCertificationsDropdownOpen}
+    setIsCertificationsDropdownOpen={setIsCertificationsDropdownOpen}
+  />
+) : (
         <div className="flex flex-wrap gap-2">
           {formData.certifications.map((cert, index) => (
             <div
