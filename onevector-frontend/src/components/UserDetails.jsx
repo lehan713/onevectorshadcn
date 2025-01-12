@@ -14,6 +14,7 @@ import { Home, ChevronRight, LogOut, Eye, Download, Edit2 } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { jwtDecode } from 'jwt-decode';
 import { SkillsEditForm, CertificationsEditForm } from './EditSandC';
+import LoadingSpinner from './LoadingSpinner';
 
 
 
@@ -454,7 +455,12 @@ const handleSubmit = async (e, section) => {
     return (
 
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      {/* Header Section */}
+      {loading ? (
+          <div className="flex items-center justify-center min-h-screen">
+              <LoadingSpinner />
+          </div>
+      ) : (
+        <>      {/* Header Section */}
   <header
       className={cn(
         "fixed top-0 left-0 right-0 z-10 shadow-md",
@@ -935,7 +941,7 @@ const handleSubmit = async (e, section) => {
               key={index} 
               className="inline-flex items-center h-8 px-4 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-full text-sm border border-gray-300 dark:border-gray-600"
             >
-              {cert}
+               {cert}
             </div>
           ))}
         </div>
@@ -944,7 +950,12 @@ const handleSubmit = async (e, section) => {
   </div>
 </div>
 </div>
-</div>
-         );}
+ </>
+          )
+          }
+ </div>
+)
+}  
+
 
 export default CandidateDetails;
