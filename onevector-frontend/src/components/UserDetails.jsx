@@ -563,7 +563,7 @@ const handleSubmit = async (e, section) => {
               <Button 
                 variant="outline" 
                 size="sm" 
-                onClick={() => handleEditToggle('personal')}
+                onClick={() => handleEditToggle('personalDetails')}
                 className="border-[#15BACD] text-[#15BACD] hover:bg-[#15BACD] hover:text-white transition-colors"
               >
                 <Edit2 className="h-4 w-4 mr-2" />
@@ -573,8 +573,8 @@ const handleSubmit = async (e, section) => {
           </div>
           
           <div className="p-6">
-            {isEditing.personal ? (
-              <form onSubmit={(e) => handleSubmit(e, 'personal')}>
+            {isEditing.personalDetails ? (
+              <form onSubmit={(e) => handleSubmit(e, 'personalDetails')}>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                   <div className="space-y-2">
                     <Label className="text-gray-700 dark:text-gray-300">Phone Number</Label>
