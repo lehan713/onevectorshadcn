@@ -24,6 +24,7 @@ function CandidateDetails() {
     const token = candidate.token;
 const decodedToken = jwtDecode(token);
 const id = decodedToken.id;
+const user8=decodedToken.username;
 
 
 
@@ -660,7 +661,7 @@ const handleSubmit = async (e, section) => {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <div className="space-y-2">
                   <Label className="text-sm text-gray-500 dark:text-gray-400">Username</Label>
-                  <p className="font-medium text-[#343636] dark:text-white">{candidate.username || 'N/A'}</p>
+                  <p className="font-medium text-[#343636] dark:text-white">{user8 || 'N/A'}</p>
                 </div>
                 <div className="space-y-2">
                   <Label className="text-sm text-gray-500 dark:text-gray-400">Phone Number</Label>
