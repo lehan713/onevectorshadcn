@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { EyeIcon, EyeOffIcon, Loader2 } from "lucide-react";
+import { EyeIcon, EyeOffIcon, Loader2, X } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import logo from './images/logo.png';
 import TalentHubImage from './images/talenthub.png';
@@ -66,93 +66,102 @@ function Login() {
       </div>
 
       {/* Right Section */}
-      <div className="flex-1 flex flex-col justify-center items-center bg-white p-6 md:p-12 space-y-8 md:space-y-10 shadow-2xl">
-        {/* Logo and Title */}
-        <div className="flex items-center space-x-4 animate-fade-in">
-          <img 
-            src={TalentHubImage} 
-            alt="TalentHub Logo" 
-            className="w-[50px] h-[70px] transform hover:scale-105 transition-transform duration-300"
-          />
-          <h1 className="text-3xl md:text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-[#15BACD] to-[#094DA2]">
-            TalentHub
-          </h1>
-        </div>
-
-        {/* Heading */}
-        <h3 className="text-xl md:text-2xl font-semibold text-gray-800 text-center w-full max-w-[450px]">
-          Welcome Back! Please Login to Continue
-        </h3>
-
-        {/* Login Form */}
-        <form onSubmit={handleSubmit} className="w-full max-w-[450px] space-y-6">
-          <div className="space-y-4">
-            <Input
-              type="email"
-              placeholder="Enter Your Email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              className="w-full h-[50px] p-4 text-lg text-gray-800 border border-gray-300 rounded-xl shadow-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+      <div className="flex-1 flex flex-col justify-center items-center bg-white p-6 md:p-12 relative">
+        <div className="w-full max-w-[450px] space-y-8 md:space-y-10">
+          {/* Logo and Title */}
+          <div className="flex items-center space-x-4 animate-fade-in justify-center">
+            <img 
+              src={TalentHubImage} 
+              alt="TalentHub Logo" 
+              className="w-[50px] h-[70px] transform hover:scale-105 transition-transform duration-300"
             />
-            
-            <div className="relative">
-              <Input
-                type={showPassword ? "text" : "password"}
-                placeholder="Enter Your Password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                className="w-full h-[50px] p-4 text-lg text-gray-800 border border-gray-300 rounded-xl shadow-md focus:outline-none focus:ring-2 focus:ring-indigo-500 pr-12"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none"
-              >
-                {showPassword ? (
-                  <EyeOffIcon className="h-5 w-5" />
-                ) : (
-                  <EyeIcon className="h-5 w-5" />
-                )}
-              </button>
-            </div>
+            <h1 className="text-3xl md:text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-[#15BACD] to-[#094DA2]">
+              TalentHub
+            </h1>
           </div>
 
-          <Button
-            type="submit"
-            disabled={isLoading}
-            className="w-full h-12 bg-gradient-to-r from-[#15BACD] to-[#094DA2] text-white rounded-xl hover:scale-105 transition-transform duration-300 disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:scale-100"
-          >
-            {isLoading ? (
-              <div className="flex items-center justify-center space-x-2">
-                <Loader2 className="h-5 w-5 animate-spin" />
-                <span>Logging in...</span>
+          {/* Heading */}
+          <h3 className="text-xl md:text-2xl font-semibold text-gray-800 text-center">
+            Welcome Back! Please Login to Continue
+          </h3>
+
+          {/* Login Form */}
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="space-y-4">
+              <Input
+                type="email"
+                placeholder="Enter Your Email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                className="w-full h-[50px] p-4 text-lg text-gray-800 border border-gray-300 rounded-xl shadow-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+              
+              <div className="relative">
+                <Input
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Enter Your Password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  className="w-full h-[50px] p-4 text-lg text-gray-800 border border-gray-300 rounded-xl shadow-md focus:outline-none focus:ring-2 focus:ring-indigo-500 pr-12"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none"
+                >
+                  {showPassword ? (
+                    <EyeOffIcon className="h-5 w-5" />
+                  ) : (
+                    <EyeIcon className="h-5 w-5" />
+                  )}
+                </button>
               </div>
-            ) : (
-              'Login'
-            )}
-          </Button>
-        </form>
+            </div>
 
-        {/* Error Message */}
-        {error && (
-          <Alert className="bg-red-50 border border-red-200 text-red-600">
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
-
-        {/* Forgot Password Link */}
-        <div className="mt-4 text-center">
-          <p className="text-gray-600">
-            Forgot your password?{' '}
-            <button
-              onClick={() => navigate('/forgot-password')}
-              className="text-[#15BACD] hover:text-[#094DA2] transition-colors duration-300 hover:underline focus:outline-none"
+            <Button
+              type="submit"
+              disabled={isLoading}
+              className="w-full h-12 bg-gradient-to-r from-[#15BACD] to-[#094DA2] text-white rounded-xl hover:scale-105 transition-transform duration-300 disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:scale-100"
             >
-              Reset it here
-            </button>
-          </p>
+              {isLoading ? (
+                <div className="flex items-center justify-center space-x-2">
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                  <span>Logging in...</span>
+                </div>
+              ) : (
+                'Login'
+              )}
+            </Button>
+          </form>
+
+          {/* Forgot Password Link */}
+          <div className="text-center">
+            <p className="text-gray-600">
+              Forgot your password?{' '}
+              <button
+                onClick={() => navigate('/forgot-password')}
+                className="text-[#15BACD] hover:text-[#094DA2] transition-colors duration-300 hover:underline focus:outline-none"
+              >
+                Reset it here
+              </button>
+            </p>
+          </div>
+           {/* Error Message - Positioned absolutely */}
+           {error && (
+            <div className="absolute  left-1/2 transform -translate-x-1/2 w-full max-w-[450px] px-4">
+              <Alert className="bg-red-50 border border-red-200 text-red-600 relative">
+                <AlertDescription>{error}</AlertDescription>
+                <button
+                  onClick={() => setError('')}
+                  className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1 hover:bg-red-100 rounded-full transition-colors"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </Alert>
+            </div>
+          )}
         </div>
       </div>
     </div>
