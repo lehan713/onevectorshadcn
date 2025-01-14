@@ -14,6 +14,8 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { CheckCircle2, AlertCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
 import LoadingSpinner from './LoadingSpinner';
+import { X } from 'lucide-react';
+import { Save } from 'lucide-react';
 
 const OnboardingForm = () => {
     const navigate = useNavigate();
@@ -59,7 +61,9 @@ const [isLoading, setIsLoading] = useState(false);
     // New state to manage dropdown visibility
     const [isSkillsDropdownOpen, setIsSkillsDropdownOpen] = useState(false);
     const [isCertificationsDropdownOpen, setIsCertificationsDropdownOpen] = useState(false);
-    
+    const [showCompletionAlert, setShowCompletionAlert] = useState(true);
+    const [formSaved, setFormSaved] = useState(false);
+const [savedResume, setSavedResume] = useState(null);
 
     useEffect(() => {
       const fetchSkillsAndCertifications = async () => {
@@ -156,6 +160,97 @@ const [isLoading, setIsLoading] = useState(false);
         }
       }
     };
+    
+    useEffect(() => {
+    const loadSavedData = () => {
+      try {
+        const savedData = localStorage.getItem('onboardingFormData');
+        if (savedData) {
+          const parsedData = JSON.parse(savedData);
+          
+          // Personal Details
+          setFirstName(parsedData.firstName || '');
+          setLastName(parsedData.lastName || '');
+          setPhoneNo(parsedData.phoneNo || '');
+          setAddressLine1(parsedData.addressLine1 || '');
+          setAddressLine2(parsedData.addressLine2 || '');
+          setCity(parsedData.city || '');
+          setState(parsedData.state || '');
+          setCountry(parsedData.country || '');
+          setPostalCode(parsedData.postalCode || '');
+          setLinkedinUrl(parsedData.linkedinUrl || '');
+          setUsername(parsedData.username || '');
+          setEmail(parsedData.email || '');
+  
+          // Professional Information
+          setRecentJob(parsedData.recentJob || '');
+          setPreferredRoles(parsedData.preferredRoles || '');
+          setAvailability(parsedData.availability || '');
+          setWorkPermitStatus(parsedData.workPermitStatus || '');
+          setPreferredRoleType(parsedData.preferredRoleType || '');
+          setPreferredWorkArrangement(parsedData.preferredWorkArrangement || '');
+          
+          // Skills and Certifications
+          setSelectedSkills(parsedData.selectedSkills || []);
+          setSelectedCertifications(parsedData.selectedCertifications || []);
+  
+          // Handle Resume
+          if (parsedData.savedResume) {
+            setSavedResume(parsedData.savedResume);
+            // Only set the resume if it's a new session
+            if (!resume) {
+              const { name, type } = parsedData.savedResume;
+              // Create a placeholder file object
+              const placeholderFile = new Blob([''], { type });
+              const file = new File([placeholderFile], name, { type });
+              setResume(file);
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error loading saved form data:', error);
+      }
+    };
+  
+    loadSavedData();
+  }, []);
+
+  // Add this function to handle form saving
+const handleSaveProgress = () => {
+  const formData = {
+    firstName,
+    lastName,
+    phoneNo,
+    addressLine1,
+    addressLine2,
+    city,
+    state,
+    country,
+    postalCode,
+    linkedinUrl,
+    username,
+    email,
+    recentJob,
+    preferredRoles,
+    availability,
+    workPermitStatus,
+    preferredRoleType,
+    preferredWorkArrangement,
+    selectedSkills,
+    selectedCertifications,
+    savedResume: resume ? {
+      name: resume.name,
+      type: resume.type,
+      lastModified: resume.lastModified
+    } : null
+  };
+
+  localStorage.setItem('onboardingFormData', JSON.stringify(formData));
+  setFormSaved(true);
+  
+  // Show success message
+  setTimeout(() => setFormSaved(false), 3000);
+};
 
 
     const handlePrevious = () => {
@@ -214,6 +309,19 @@ const [isLoading, setIsLoading] = useState(false);
       setIsCertificationsDropdownOpen(false); // Close the dropdown after selection
   };
 
+  // Modify the resume upload handler
+const handleResumeUpload = (e) => {
+  const file = e.target.files[0];
+  if (file) {
+    setResume(file);
+    setSavedResume({
+      name: file.name,
+      type: file.type,
+      lastModified: file.lastModified
+    });
+  }
+};
+
   const steps = [
     { id: 1, title: 'Personal Details' },
     { id: 2, title: 'Qualifications' },
@@ -225,21 +333,24 @@ const [isLoading, setIsLoading] = useState(false);
   const [formProgress, setFormProgress] = React.useState(0);
   const [lastActive, setLastActive] = React.useState(null);
 
-  // Calculate form progress
   React.useEffect(() => {
     const requiredFields = {
       step1: ['username', 'password', 'firstName', 'lastName', 'linkedinUrl'],
       step2: ['recentJob', 'availability', 'workPermitStatus', 'resume'],
-      step3: ['selectedSkills']
+      step3: ['selectedSkills', 'selectedCertifications'] // Added selectedCertifications
     };
 
     const filledFields = {
       step1: [username, password, firstName, lastName, linkedinUrl].filter(Boolean).length,
       step2: [recentJob, availability, workPermitStatus, resume].filter(Boolean).length,
-      step3: [selectedSkills.length > 0].filter(Boolean).length
+      step3: [
+        selectedSkills.length > 0,
+        selectedCertifications.length > 0 // Added certification check
+      ].filter(Boolean).length
     };
 
-    const totalProgress = (
+
+       const totalProgress = (
       (filledFields.step1 / requiredFields.step1.length +
         filledFields.step2 / requiredFields.step2.length +
         filledFields.step3 / requiredFields.step3.length) /
@@ -247,56 +358,28 @@ const [isLoading, setIsLoading] = useState(false);
     ) * 100;
 
     setFormProgress(Math.round(totalProgress));
-  }, [username, password, firstName, lastName, linkedinUrl, recentJob, availability, workPermitStatus, resume, selectedSkills]);
+  }, [username, password, firstName, lastName, linkedinUrl, recentJob, availability, workPermitStatus, resume, selectedSkills, selectedCertifications]);
 
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-100 p-4">
-          {isLoading && <LoadingSpinner />}
-        {/* Updated Header Section */}
-        <div className="flex items-center justify-center mb-6 space-x-4">
-          <img 
-            src={TalentHubImage}
-            alt="TalentHub" 
-            className="h-12"
-          />
-          <h1 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#15BACD] to-[#094DA2]">
-            TalentHub
-          </h1>
-        </div>
+      {isLoading && <LoadingSpinner />}
+      
+      {/* Updated Header Section with mobile responsiveness */}
+      <div className="flex items-center mb-6 md:justify-center md:space-x-4 pl-2">
+        <img 
+          src={TalentHubImage}
+          alt="TalentHub" 
+          className="h-8 md:h-12"
+        />
+        <h1 className="text-3xl md:text-3xl ml-2 font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#15BACD] to-[#094DA2]">
+          TalentHub
+        </h1>
+      </div>
 
-    {/* Welcome Screen with Updated Styling */}
-    {showWelcome && (
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: -20 }}
-        className="max-w-2xl mx-auto mb-6 mt-24"
-      >
-        <Card className="bg-white/95 backdrop-blur-sm shadow-xl border border-gray-200">
-          <CardContent className="p-12">
-            <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="text-center">
-              <h1 className="text-4xl sm:text-5xl font-bold text-[#353939] mb-6">
-                Welcome to TalentHub! 👋
-              </h1>
-              <p className="text-lg sm:text-xl text-gray-600 mb-8">
-                Let's create your professional profile in three simple steps
-              </p>
-              <Button
-                onClick={() => setShowWelcome(false)}
-                className="px-10 py-4 bg-[#353939] hover:bg-[#454545] text-white text-xl rounded-lg transition-colors shadow-lg"
-              >
-                Let's Get Started
-              </Button>
-            </motion.div>
-          </CardContent>
-        </Card>
-      </motion.div>
-    )}
-
-   {/* Updated Circular Progress with new color scheme */}
-   <div className="fixed top-4 right-4 z-50">
-        <div className="relative w-16 h-16">
+      {/* Progress indicator with mobile responsiveness */}
+      <div className="fixed top-4 right-4 z-50">
+        <div className="relative w-12 h-12 md:w-16 md:h-16">
           <svg className="w-full h-full" viewBox="0 0 36 36">
             <path
               d="M18 2.0845
@@ -318,11 +401,90 @@ const [isLoading, setIsLoading] = useState(false);
             />
           </svg>
           <div className="absolute inset-0 flex items-center justify-center">
-            <span className="text-sm font-semibold text-[#353939]">{formProgress}%</span>
+            <span className="text-xs md:text-sm font-semibold text-[#353939]">{formProgress}%</span>
           </div>
         </div>
       </div>
 
+
+        {showWelcome && (
+  <motion.div
+    initial={{ opacity: 0, y: 20 }}
+    animate={{ opacity: 1, y: 0 }}
+    exit={{ opacity: 0, y: -20 }}
+    className="max-w-2xl mx-auto mb-6 mt-18"
+  >
+    <Card className="bg-white/95 backdrop-blur-sm shadow-xl border border-gray-200">
+      <CardContent className="p-12">
+        <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="text-center">
+          <h1 className="text-4xl sm:text-5xl font-bold text-[#353939] mb-8">
+            Welcome to TalentHub!
+          </h1>
+          
+          <div className="space-y-8 mb-10">
+            <p className="text-lg sm:text-xl text-gray-600">
+              Complete your professional profile in three simple steps:
+            </p>
+
+            {/* Creative Steps Display */}
+            <div className="flex flex-col space-y-6 max-w-lg mx-auto">
+              <motion.div 
+                className="flex items-center space-x-4 group"
+                whileHover={{ x: 10 }}
+                transition={{ type: "spring", stiffness: 300 }}
+              >
+                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#15BACD] to-[#094DA2] flex items-center justify-center flex-shrink-0 shadow-lg group-hover:shadow-[#15BACD]/20">
+                  <span className="text-xl font-bold text-white">1</span>
+                </div>
+                <div className="flex-1 bg-gray-50 p-4 rounded-lg border-l-4 border-[#15BACD] shadow-sm group-hover:shadow-md transition-all">
+                  <h3 className="font-semibold text-[#353939] group-hover:text-[#15BACD] transition-colors">Personal Details</h3>
+                  <p className="text-sm text-gray-600">Set up your profile and contact information</p>
+                </div>
+              </motion.div>
+
+              <motion.div 
+                className="flex items-center space-x-4 group"
+                whileHover={{ x: 10 }}
+                transition={{ type: "spring", stiffness: 300 }}
+              >
+                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#15BACD] to-[#094DA2] flex items-center justify-center flex-shrink-0 shadow-lg group-hover:shadow-[#15BACD]/20">
+                  <span className="text-xl font-bold text-white">2</span>
+                </div>
+                <div className="flex-1 bg-gray-50 p-4 rounded-lg border-l-4 border-[#15BACD] shadow-sm group-hover:shadow-md transition-all">
+                  <h3 className="font-semibold text-[#353939] group-hover:text-[#15BACD] transition-colors">Qualifications</h3>
+                  <p className="text-sm text-gray-600">Share your experience and preferences</p>
+                </div>
+              </motion.div>
+
+              <motion.div 
+                className="flex items-center space-x-4 group"
+                whileHover={{ x: 10 }}
+                transition={{ type: "spring", stiffness: 300 }}
+              >
+                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#15BACD] to-[#094DA2] flex items-center justify-center flex-shrink-0 shadow-lg group-hover:shadow-[#15BACD]/20">
+                  <span className="text-xl font-bold text-white">3</span>
+                </div>
+                <div className="flex-1 bg-gray-50 p-4 rounded-lg border-l-4 border-[#15BACD] shadow-sm group-hover:shadow-md transition-all">
+                  <h3 className="font-semibold text-[#353939] group-hover:text-[#15BACD] transition-colors">Skills & Certifications</h3>
+                  <p className="text-sm text-gray-600">Highlight your expertise and credentials</p>
+                </div>
+              </motion.div>
+            </div>
+          </div>
+
+          <Button
+            onClick={() => setShowWelcome(false)}
+            className="px-10 py-4 bg-[#353939] hover:bg-[#454545] text-white text-xl rounded-lg transition-colors shadow-lg"
+          >
+            Let's Get Started
+          </Button>
+        </motion.div>
+      </CardContent>
+    </Card>
+  </motion.div>
+)}
+
+   
 
     {!showWelcome && (
         <Card className="max-w-4xl mx-auto bg-white shadow-xl rounded-xl border border-gray-200">
@@ -695,17 +857,17 @@ const [isLoading, setIsLoading] = useState(false);
         </Label>
         <div className="flex items-center space-x-2">
           <div className="flex-1">
-            <Input
-              id="resume"
-              type="file"
-              accept=".pdf,.doc,.docx"
-              onChange={(e) => setResume(e.target.files[0])}
-              required
-              className="mt-1 cursor-pointer bg-gray-50 border-gray-200 focus:border-[#353939] focus:ring-[#353939]/20
-              file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 
-              file:text-sm file:font-semibold file:bg-[#353939]/10 file:text-[#353939]
-              hover:file:bg-[#353939]/20"
-            />
+          <Input
+  id="resume"
+  type="file"
+  accept=".pdf,.doc,.docx"
+  onChange={handleResumeUpload}
+  required={!savedResume}
+  className="mt-1 cursor-pointer bg-gray-50 border-gray-200 focus:border-[#353939] focus:ring-[#353939]/20
+  file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 
+  file:text-sm file:font-semibold file:bg-[#353939]/10 file:text-[#353939]
+  hover:file:bg-[#353939]/20"
+/>
           </div>
           {resume && (
             <Button
@@ -839,9 +1001,10 @@ const [isLoading, setIsLoading] = useState(false);
       </div>
 
       <div className="space-y-4">
-        <Label className="text-sm font-medium text-[#353939]">
-          Professional Certifications
-        </Label>
+  <Label className="text-sm font-medium text-[#353939]">
+    Professional Certifications <span className="text-red-500">*</span>
+  </Label>
+
 
         {/* Certifications Input and Dropdown */}
         <div className="relative">
@@ -906,9 +1069,9 @@ const [isLoading, setIsLoading] = useState(false);
 
         {/* Selected Certifications */}
         <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 min-h-[100px]">
-          {selectedCertifications.length === 0 ? (
-            <p className="text-gray-500 text-sm text-center">No certifications added. Include any relevant professional certifications.</p>
-          ) : (
+    {selectedCertifications.length === 0 ? (
+      <p className="text-gray-500 text-sm text-center">Add at least one certification (required). Include any relevant professional certifications.</p>
+    ) : (
             <div className="flex flex-wrap gap-2">
               {selectedCertifications.map((cert, index) => (
                 <Badge 
@@ -941,27 +1104,41 @@ const [isLoading, setIsLoading] = useState(false);
     </div>
     </TabsContent>
             </Tabs>
+
             
             {/* Updated Navigation Buttons */}
-      <div className="flex justify-end space-x-4 mt-6">
+            <div className="flex justify-between items-center mt-6">
+      <Button
+        type="button"
+        onClick={handleSaveProgress}
+        className="bg-gradient-to-r from-[#15abcd] to-[#094da2] hover:opacity-90 text-white rounded-lg flex items-center gap-2 md:px-6 md:py-2 p-2"
+      >
+        <Save className="w-4 h-4" />
+        <span className="hidden md:inline">Save</span>
+      </Button>
+      
+      <div className="flex space-x-4">
         {step > 1 && (
           <Button
             type="button"
             variant="outline"
             onClick={handlePrevious}
-            className="px-6 sm:px-8 py-2 border-[#353939] hover:bg-[#353939]/5 text-[#353939] transition-all rounded-lg"
+            className="px-6 sm:px-8 py-2 border-[#353939] hover:bg-[#353939]/5 text-[#353939]"
           >
-            Previous
+            <span className="hidden md:inline">Previous</span>
+            <span className="md:hidden">Back</span>
           </Button>
         )}
         <Button 
           type="submit"
-          className="px-6 sm:px-8 py-2 bg-[#353939] hover:bg-[#454545] text-white transition-all rounded-lg"
+          className="px-6 sm:px-8 py-2 bg-[#353939] hover:bg-[#454545] text-white"
         >
           {step === 3 ? 'Submit' : 'Next'}
         </Button>
       </div>
-          </form>
+    </div>
+
+    </form>
         </CardContent>
       </Card>
     )
@@ -991,19 +1168,36 @@ const [isLoading, setIsLoading] = useState(false);
             })}
           </motion.div>
         )}
-        {formProgress === 100 && (
+       {formProgress === 100 && showCompletionAlert && (
           <motion.div
             initial={{ opacity: 0, x: 100 }}
             animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 100 }}
           >
-            <Alert className="bg-white/95 backdrop-blur-sm border-l-4 border-l-green-500 shadow-lg">
+            <Alert className="bg-white/95 backdrop-blur-sm border-l-4 border-l-green-500 shadow-lg relative">
               <CheckCircle2 className="h-4 w-4 text-green-500" />
-              <AlertDescription className="text-sm text-gray-600">
+              <AlertDescription className="text-sm text-gray-600 pr-6">
                 Perfect! Your profile is complete. Ready to join TalentHub?
               </AlertDescription>
+              <button 
+                onClick={() => setShowCompletionAlert(false)}
+                className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X className="h-4 w-4" />
+              </button>
             </Alert>
-          </motion.div>
+           
+{formSaved && (
+  <Alert className="fixed bottom-4 right-4 bg-white/95 backdrop-blur-sm border-l-4 border-l-green-500 shadow-lg">
+    <CheckCircle2 className="h-4 w-4 text-green-500" />
+    <AlertDescription className="text-sm text-gray-600">
+      Progress saved successfully!
+    </AlertDescription>
+  </Alert>
+)}
+ </motion.div>
         )}
+
       </div>
     </div>
   );
