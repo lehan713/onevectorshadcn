@@ -5,6 +5,7 @@ import { X } from "lucide-react";
 const TutorialOverlay = ({ onClose }) => {
   const [currentStep, setCurrentStep] = useState(0);
   const [showTutorial, setShowTutorial] = useState(true);
+  const [position, setPosition] = useState({ top: 0, left: 0 });
 
   const steps = [
     {
@@ -20,19 +21,94 @@ const TutorialOverlay = ({ onClose }) => {
     {
       target: '[data-tutorial="add-user"]',
       content: 'Add new users to the system',
-      position: 'bottom'
+      position: 'left',
+      offset: -60  // Additional left offset for add-user step
     },
     {
       target: '[data-tutorial="history"]',
       content: 'View history of sent magic links',
-      position: 'left'
+      position: 'left',
+      offset: -60  // Additional left offset for history step
     },
     {
       target: '[data-tutorial="actions"]',
       content: 'Manage users: promote/demote, delete, or view details',
-      position: 'left'
+      position: 'bottom'
     }
   ];
+
+  const calculatePosition = (targetRect, dialogWidth, dialogHeight) => {
+    const viewport = {
+      width: window.innerWidth,
+      height: window.innerHeight
+    };
+
+    let top = 0;
+    let left = 0;
+
+    const step = steps[currentStep];
+    const padding = 20; // Increased padding for better spacing
+    const safetyMargin = 10; // Extra margin to ensure elements stay within viewport
+
+    // Calculate initial position based on preferred position
+    switch (step.position) {
+      case 'bottom':
+        top = targetRect.bottom + padding;
+        // Center horizontally relative to target
+        left = targetRect.left + (targetRect.width / 2) - (dialogWidth / 2);
+        break;
+      case 'left':
+        // Vertically center relative to target
+        top = targetRect.top + (targetRect.height / 2) - (dialogHeight / 2);
+        // Apply additional offset for specific steps
+        left = targetRect.left - dialogWidth - padding + (step.offset || 0);
+        break;
+      default:
+        break;
+    }
+
+    // Ensure dialog stays within viewport bounds
+    // Right edge
+    if (left + dialogWidth > viewport.width - safetyMargin) {
+      left = viewport.width - dialogWidth - safetyMargin;
+    }
+    // Left edge
+    if (left < safetyMargin) {
+      left = safetyMargin;
+    }
+    // Bottom edge
+    if (top + dialogHeight > viewport.height - safetyMargin) {
+      top = viewport.height - dialogHeight - safetyMargin;
+    }
+    // Top edge
+    if (top < safetyMargin) {
+      top = safetyMargin;
+    }
+
+    return { top, left };
+  };
+
+  useEffect(() => {
+    const updatePosition = () => {
+      const targetEl = document.querySelector(steps[currentStep].target);
+      if (targetEl) {
+        const rect = targetEl.getBoundingClientRect();
+        const dialogWidth = 340; // Width for comfortable reading
+        const dialogHeight = 160; // Height including padding and buttons
+        const newPosition = calculatePosition(rect, dialogWidth, dialogHeight);
+        setPosition(newPosition);
+      }
+    };
+
+    updatePosition();
+    // Update position on resize and scroll
+    window.addEventListener('resize', updatePosition);
+    window.addEventListener('scroll', updatePosition);
+    return () => {
+      window.removeEventListener('resize', updatePosition);
+      window.removeEventListener('scroll', updatePosition);
+    };
+  }, [currentStep]);
 
   const handleNext = () => {
     if (currentStep < steps.length - 1) {
@@ -69,28 +145,28 @@ const TutorialOverlay = ({ onClose }) => {
       </div>
       
       <div 
-        className="absolute bg-white dark:bg-gray-800 p-4 rounded-lg shadow-xl"
+        className="absolute bg-white dark:bg-gray-800 p-6 rounded-lg shadow-xl w-80 md:w-96 transition-all duration-300"
         style={{
-          top: rect.bottom + 8,
-          left: rect.left,
-          maxWidth: '300px'
+          top: position.top,
+          left: position.left,
+          maxWidth: 'calc(100vw - 40px)' // Ensures padding on mobile
         }}
       >
         <Button 
           variant="ghost" 
           size="sm" 
-          className="absolute top-2 right-2"
+          className="absolute -top-2 -right-2 h-8 w-8 rounded-full bg-white dark:bg-gray-800 shadow-md hover:bg-gray-100 dark:hover:bg-gray-700"
           onClick={handleClose}
         >
           <X className="h-4 w-4" />
         </Button>
         
-        <div className="mb-4 text-sm">
+        <div className="mb-6 text-sm">
           {steps[currentStep].content}
         </div>
         
         <div className="flex justify-between items-center">
-          <div className="space-x-1">
+          <div className="space-x-2">
             {steps.map((_, idx) => (
               <span
                 key={idx}
@@ -101,7 +177,7 @@ const TutorialOverlay = ({ onClose }) => {
             ))}
           </div>
           
-          <Button onClick={handleNext}>
+          <Button onClick={handleNext} className="ml-4">
             {currentStep === steps.length - 1 ? 'Finish' : 'Next'}
           </Button>
         </div>
