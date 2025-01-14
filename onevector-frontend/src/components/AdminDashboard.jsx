@@ -29,6 +29,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import LoadingSpinner from './LoadingSpinner'; // Add this import
+import TutorialOverlay from './TutorialOverlay';
 
 
 function AdminDashboard() {
@@ -49,7 +50,7 @@ function AdminDashboard() {
   const [showMagicLinkPopup, setShowMagicLinkPopup] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
-
+  const [showTutorial, setShowTutorial] = useState(false);
   const [showHistoryPopup, setShowHistoryPopup] = useState(false);
 const [magicLinks, setMagicLinks] = useState([]);
 const [isSendingMagicLink, setIsSendingMagicLink] = useState(false);
@@ -145,6 +146,13 @@ const handleDownloadDetails = async () => {
 };
 
 const [candidatesWithDetails, setCandidatesWithDetails] = useState([]);
+
+useEffect(() => {
+  const tutorialCompleted = localStorage.getItem('tutorialCompleted');
+  if (!tutorialCompleted) {
+    setShowTutorial(true);
+  }
+}, []);
 
 useEffect(() => {
   const fetchCandidatesWithDetails = async () => {
@@ -345,34 +353,38 @@ useEffect(() => {
     }
   };
 
-  const confirmDelete = async () => 
-    {
+  const confirmDelete = async () => {
     if (!selectedCandidate) return;
-
   
-
     try {
-      // First delete the qualifications
-      await axios.delete(`http://localhost:3000/api/qualifications/${selectedCandidate.id}`);
-      // Then delete the user skills
-      await axios.delete(`http://localhost:3000/api/user_skills/${selectedCandidate.id}`);
-      // Then delete the user certifications
-      await axios.delete(`http://localhost:3000/api/user_certifications/${selectedCandidate.id}`);
-      // Then delete the personal details
-      await axios.delete(`http://localhost:3000/api/personaldetails/${selectedCandidate.id}`);
-      // Finally delete the user
-      await axios.delete(`http://localhost:3000/api/candidates/${selectedCandidate.id}`);
-      
-      setCandidates(candidates.filter((candidate) => candidate.id !== selectedCandidate.id));
+      // First update the UI
+      setCandidatesWithDetails(prev => 
+        prev.filter(candidate => candidate.id !== selectedCandidate.id)
+      );
+      setCandidates(prev => 
+        prev.filter(candidate => candidate.id !== selectedCandidate.id)
+      );
+      setIsDeleteModalOpen(false);
       setSuccessMessageText('Candidate deleted successfully!');
       setShowSuccessMessage(true);
-      setIsDeleteModalOpen(false);
+  
+      // Then perform the deletion in the background
+      await axios.delete(`http://localhost:3000/api/qualifications/${selectedCandidate.id}`);
+      await axios.delete(`http://localhost:3000/api/user_skills/${selectedCandidate.id}`);
+      await axios.delete(`http://localhost:3000/api/user_certifications/${selectedCandidate.id}`);
+      await axios.delete(`http://localhost:3000/api/personaldetails/${selectedCandidate.id}`);
+      await axios.delete(`http://localhost:3000/api/candidates/${selectedCandidate.id}`);
+  
       setTimeout(() => setShowSuccessMessage(false), 3000);
-  } catch (error) {
-      alert('Failed to delete candidate and their associated data');
+    } catch (error) {
+      // If deletion fails, revert the UI changes
       console.error('Delete error:', error);
-  }
+      alert('Failed to delete candidate. Please try again.');
+      // Refresh the candidates list to restore the correct state
+      fetchCandidatesWithDetails();
+    }
   };
+
 
   return (
     <div className={`min-h-screen ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'} font-sans`}>
@@ -416,131 +428,130 @@ useEffect(() => {
       </Card>
     </div>
   )}
+{/* Header Section */}
+<header
+  className={cn(
+    "fixed top-0 left-0 right-0 z-10 shadow-md",
+    isDarkMode ? "bg-gray-800" : "bg-white"
+  )}
+>
+  <div className="flex justify-between items-center p-2 sm:p-4 w-full">
+    {/* Logo and Title */}
+    <div className="flex items-center space-x-2">
+      <img
+        src={oneVectorImage}
+        alt="OneVector Logo"
+        className="w-5 h-6 sm:w-8 sm:h-8"
+      />
+      <h1
+        className={cn(
+          "text-lg sm:text-2xl font-semibold tracking-wide",
+          "text-transparent bg-clip-text bg-gradient-to-r from-[#15BACD] to-[#094DA2]"
+        )}
+      >
+        TalentHub
+      </h1>
+    </div>
 
-  {/* Header Section */}
-  <header
-      className={cn(
-        "fixed top-0 left-0 right-0 z-10 shadow-md",
-        isDarkMode ? "bg-gray-800" : "bg-white"
-      )}
-    >
-      <div className="flex justify-between items-center p-4 w-full">
-  {/* Logo and Title (left-aligned) */}
-  <div className="flex items-center space-x-2">
-    <img
-      src={oneVectorImage}
-      alt="OneVector Logo"
-      className="w-5 h-6 md:w-10 md:h-10"
-    />
-    <h1
-      className={cn(
-        "text-3xl font-semibold tracking-wide",
-        isDarkMode
-          ? "text-transparent bg-clip-text bg-gradient-to-r from-[#15BACD] to-[#094DA2]"
-          : "text-transparent bg-clip-text bg-gradient-to-r from-[#15BACD] to-[#094DA2]"
-      )}
-    >
-      TalentHub
-    </h1>
+    {/* Action Buttons */}
+    <div className="flex items-center space-x-2">
+      {/* Dark Mode Toggle Button */}
+      <Toggle
+        onClick={toggleTheme}
+        className={cn(
+          "p-1 sm:p-2 rounded-full",
+          isDarkMode
+            ? "bg-gray-700 hover:bg-gray-600"
+            : "bg-gray-200 hover:bg-gray-300"
+        )}
+      >
+        {isDarkMode ? (
+          <SunIcon className="w-4 h-4 sm:w-5 sm:h-5 text-gray-100" />
+        ) : (
+          <MoonIcon className="w-4 h-4 sm:w-5 sm:h-5 text-gray-800" />
+        )}
+      </Toggle>
+
+      {/* Logout Button */}
+      <Button
+        variant="outline"
+        onClick={handleLogout}
+        className={cn(
+          "px-3 sm:px-4 py-1 sm:py-2 h-8 sm:h-10 rounded-full flex items-center justify-center space-x-2 text-sm sm:text-base font-semibold transition-all",
+          isDarkMode
+            ? "bg-gradient-to-r from-red-500 to-red-700 text-white hover:from-red-600 hover:to-red-800"
+            : "bg-gradient-to-r from-red-400 to-red-600 text-white hover:from-red-500 hover:to-red-700"
+        )}
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          strokeWidth="1.5"
+          stroke="currentColor"
+          className="w-4 h-4 sm:w-5 sm:h-5"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-7.5A2.25 2.25 0 003.75 5.25v13.5A2.25 2.25 0 006 21h7.5a2.25 2.25 0 002.25-2.25V15"
+          />
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M18 12H9m0 0l3-3m-3 3l3 3"
+          />
+        </svg>
+        <span>Logout</span>
+      </Button>
+    </div>
   </div>
+</header>
 
-        {/* Action buttons (right-aligned) */}
-        <div className="flex items-center space-x-4">
-          {/* Dark Mode Toggle Button */}
-          <Toggle
-            onClick={toggleTheme}
-            className={cn(
-              "p-2 rounded-full",
-              isDarkMode
-                ? "bg-gray-700 hover:bg-gray-600"
-                : "bg-gray-200 hover:bg-gray-300"
-            )}
-          >
-            {isDarkMode ? (
-              <SunIcon className="w-5 h-5 text-gray-100" />
-            ) : (
-              <MoonIcon className="w-5 h-5 text-gray-800" />
-            )}
-          </Toggle>
-
-          {/* Logout Button */}
-          <Button
-            variant="outline"
-            onClick={handleLogout}
-            className={cn(
-              "px-6 py-2 h-12 rounded-full flex items-center justify-center space-x-3 font-semibold text-base transition-all",
-              isDarkMode
-                ? "bg-gradient-to-r from-red-500 to-red-700 text-white hover:from-red-600 hover:to-red-800"
-                : "bg-gradient-to-r from-red-400 to-red-600 text-white hover:from-red-500 hover:to-red-700"
-            )}
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              strokeWidth="1.5"
-              stroke="currentColor"
-              className="w-6 h-6"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-7.5A2.25 2.25 0 003.75 5.25v13.5A2.25 2.25 0 006 21h7.5a2.25 2.25 0 002.25-2.25V15"
-              />
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M18 12H9m0 0l3-3m-3 3l3 3"
-              />
-            </svg>
-            <span>Logout</span>
-          </Button>
-        </div>
-      </div>
-    </header>
-    <main className="pt-16 px-0 lg:px-0 w-full bg-white text-black dark:bg-gray-900 dark:text-white">
-  <div className="flex flex-col md:flex-row justify-between items-center mb-4 mt-8 gap-6 w-full">
+<main className="pt-16 px-4 sm:px-0 w-full bg-white text-black dark:bg-gray-900 dark:text-white">
+  <div className="flex flex-col md:flex-row justify-between items-center mb-4 mt-8 gap-4 w-full">
     {/* Search Input */}
     <Input
       type="text"
       placeholder="Search by name, email, skills, certifications, or qualifications"
       value={searchQuery}
       onChange={(e) => setSearchQuery(e.target.value)}
-      className="w-full ml-2 md:w-1/2 border border-gray-300 bg-white text-black rounded-xl p-3 focus:ring-2 focus:ring-gray-500 transition-all duration-200 dark:bg-gray-800 dark:text-white dark:border-gray-700"
+      className="w-full md:w-1/2 border border-gray-300 bg-white text-black rounded-xl p-3 focus:ring-2 focus:ring-gray-500 transition-all duration-200 dark:bg-gray-800 dark:text-white dark:border-gray-700"
+      data-tutorial="search"
     />
 
     {/* Buttons and History Icon */}
-<div className="flex flex-wrap items-center gap-6 w-full md:w-auto mt-4 md:mt-0">
-  {/* Details Button */}
-  <Button
-    onClick={handleDownloadDetails}
-    variant="solid"
-    className="px-4 h-10 py-2 text-white font-roboto rounded-xl flex items-center justify-center bg-[#094DA2] border border-[#094DA2] hover:bg-[#093A8E] transition-all duration-200 transform hover:scale-105 focus:outline-none dark:bg-[#094DA2] dark:border-[#094DA2] dark:hover:bg-[#093A8E]"
-  >
-    <DownloadIcon className="h-5 w-5 mr-2 text-white" />
-    DETAILS
-  </Button>
+    <div className="flex flex-wrap items-center gap-4 sm:gap-6 w-full md:w-auto mt-4 md:mt-0">
+      <Button
+        onClick={handleDownloadDetails}
+        variant="solid"
+        className="px-3 sm:px-4 py-2 h-10 text-white font-medium rounded-xl flex items-center justify-center bg-[#094DA2] border border-[#094DA2] hover:bg-[#093A8E] transition-all duration-200 transform hover:scale-105 focus:outline-none dark:bg-[#094DA2] dark:border-[#094DA2] dark:hover:bg-[#093A8E]"
+        data-tutorial="download"
+      >
+        <DownloadIcon className="h-5 w-5 mr-2 text-white" />
+        DETAILS
+      </Button>
 
-  {/* Add User Button */}
-  <Button
-    onClick={() => setShowForm(true)}
-    variant="solid"
-    className="px-4 h-10 py-2 text-white font-medium rounded-xl flex items-center justify-center bg-[#094DA2] border border-[#094DA2] hover:bg-[#093A8E] transition-all duration-200 transform hover:scale-105 focus:outline-none dark:bg-[#094DA2] dark:border-[#094DA2] dark:hover:bg-[#093A8E]"
-  >
-    <span className="text-lg font-bold">+</span>
-    ADD USER
-  </Button>
+      {/* Add User Button */}
+      <Button
+        onClick={() => setShowForm(true)}
+        variant="solid"
+        className="px-3 sm:px-4 py-2 h-10 text-white font-medium rounded-xl flex items-center justify-center bg-[#094DA2] border border-[#094DA2] hover:bg-[#093A8E] transition-all duration-200 transform hover:scale-105 focus:outline-none dark:bg-[#094DA2] dark:border-[#094DA2] dark:hover:bg-[#093A8E]"
+        data-tutorial="add-user"
+      >
+        <span className="text-lg font-bold">+</span>
+        ADD USER
+      </Button>
 
-  {/* History Icon */}
-  <FaHistory
-    size={20}
-    className="mr-2 cursor-pointer text-[#094DA2] transition-all duration-200 transform hover:scale-105 dark:text-[#094DA2] dark:hover:scale-110"
-    onClick={fetchMagicLinks}
-  />
-
-  
-</div>
-</div>
+      {/* History Icon */}
+      <FaHistory
+        size={18}
+        className="cursor-pointer mr-2 text-[#094DA2] transition-all duration-200 transform hover:scale-105 dark:text-[#094DA2] dark:hover:scale-110"
+        onClick={fetchMagicLinks}
+        data-tutorial="history"
+      />
+    </div>
+  </div>
 
 
 
@@ -560,59 +571,93 @@ useEffect(() => {
       <Button className="hidden">Open Modal</Button>
     </DialogTrigger>
     <DialogContent
-      className={`p-8 rounded-lg shadow-xl w-full md:w-96 ${
-        isDarkMode ? 'bg-gray-800 text-gray-100' : 'bg-white text-black'
-      }`}
+      className={`
+        sm:max-w-md w-[calc(100%-2rem)] mx-auto
+        p-4 sm:p-6 md:p-8
+        rounded-xl shadow-xl
+        transition-all duration-200
+        ${isDarkMode ? 'bg-gray-800 text-gray-100' : 'bg-white text-gray-900'}
+      `}
     >
-      <DialogHeader>
-        <DialogTitle className="text-2xl font-semibold mb-4">Add a New User</DialogTitle>
-        <DialogDescription className="text-sm">Enter the email address of the new user.</DialogDescription>
+      <DialogHeader className="space-y-2 sm:space-y-3">
+        <DialogTitle className="text-xl sm:text-2xl font-bold tracking-tight">
+          Add a New User
+        </DialogTitle>
+        <DialogDescription 
+          className={`text-sm sm:text-base ${
+            isDarkMode ? 'text-gray-300' : 'text-gray-600'
+          }`}
+        >
+          Enter the email address of the new user.
+        </DialogDescription>
       </DialogHeader>
-      <div className="flex flex-col space-y-4">
+
+      <div className="mt-6 flex flex-col space-y-5">
         <Input
           type="email"
           placeholder="Email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className={`border p-3 rounded-lg placeholder-gray-400 focus:outline-none focus:ring-2 ${
-            isDarkMode
-              ? 'border-gray-600 bg-gray-700 text-gray-100 focus:ring-gray-500'
-              : 'border-gray-300 focus:ring-black'
-          }`}
+          className={`
+            h-11 sm:h-12
+            px-4 text-base
+            rounded-lg
+            transition-all duration-200
+            focus:outline-none focus:ring-2
+            ${isDarkMode 
+              ? 'bg-gray-700 border-gray-600 text-gray-100 focus:ring-blue-500/40 placeholder-gray-400' 
+              : 'border-gray-200 focus:ring-blue-500/40 placeholder-gray-500 hover:border-gray-300'
+            }
+          `}
         />
-         <Button
-              onClick={sendMagicLink}
-              className={`px-6 py-3 font-medium rounded-lg focus:outline-none focus:ring-2 ${
-                isDarkMode
-                  ? 'bg-gradient-to-r from-[#094DA2] to-[#15abcd] text-gray-100 focus:ring-[#15abcd]'
-                  : 'bg-gradient-to-r from-[#15ABCD] to-[#094DA2] text-white focus:ring-[#094DA2]'
-              } hover:opacity-90`}
-              disabled={isSendingMagicLink}
-            >
-              {isSendingMagicLink ? (
-                <div className="flex items-center justify-center space-x-2">
-                  <LoadingSpinner />
-                  <span>Sending...</span>
-                </div>
-              ) : (
-                'Send Magic Link'
-              )}
-            </Button>
-            <Button
-          onClick={() => setShowForm(false)}
-          className={`px-6 py-3 rounded-lg ${
-            isDarkMode
-              ? 'bg-gray-600 text-gray-100 hover:bg-gray-700'
-              : 'bg-gray-300 text-black hover:bg-gray-400'
-          }`}
-        >
-          Close
-        </Button>
+
+        <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 pt-2">
+          <Button
+            onClick={() => setShowForm(false)}
+            className={`
+              h-11 sm:h-12 px-6
+              text-base font-medium
+              rounded-lg
+              transition-all duration-200
+              ${isDarkMode
+                ? 'bg-gray-700 text-gray-100 hover:bg-gray-600'
+                : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
+              }
+            `}
+          >
+            Cancel
+          </Button>
+
+          <Button
+            onClick={sendMagicLink}
+            className={`
+              h-11 sm:h-12 px-6
+              text-base font-medium
+              rounded-lg
+              transition-all duration-200
+              ${isDarkMode
+                ? 'bg-gradient-to-r from-[#094DA2] to-[#15abcd] text-gray-100'
+                : 'bg-gradient-to-r from-[#15ABCD] to-[#094DA2] text-white'
+              }
+              hover:opacity-90 disabled:opacity-60
+              flex-1 sm:flex-none sm:min-w-[140px]
+            `}
+            disabled={isSendingMagicLink}
+          >
+            {isSendingMagicLink ? (
+              <div className="flex items-center justify-center gap-2">
+                <LoadingSpinner />
+                <span>Sending...</span>
+              </div>
+            ) : (
+              'Send Magic Link'
+            )}
+          </Button>
+        </div>
       </div>
     </DialogContent>
   </Dialog>
 )}
-
   {/* Table section with proper loading state */}
   {loading ? (
           <div className="flex justify-center items-center p-8">
@@ -675,7 +720,7 @@ useEffect(() => {
                 </span>
               </TableCell>
               <TableCell className="py-2.5 px-3 text-center">
-                <div className="flex justify-center items-center gap-2">
+              <div className="flex justify-center items-center gap-2" data-tutorial="actions">
                   <Button
                     variant="outline"
                     onClick={() => toggleRole(candidate)}
@@ -849,6 +894,9 @@ useEffect(() => {
  </motion.div>
         </motion.div>
       )}
+      {showTutorial && (
+  <TutorialOverlay onClose={() => setShowTutorial(false)} />
+)}
     </div>
   );
 }
