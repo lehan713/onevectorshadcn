@@ -2,18 +2,18 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import LoadingSpinner from "./LoadingSpinner"; // Import the spinner
+import LoadingSpinner from "./LoadingSpinner";
 import oneVectorImage from './images/onevector.png';
 
 const ForgotPassword = () => {
   const [email, setEmail] = useState('');
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false); // Loading state
+  const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true); // Start loading
+    setLoading(true);
     try {
       const response = await fetch('http://localhost:3000/api/forgot-password', {
         method: 'POST',
@@ -30,79 +30,113 @@ const ForgotPassword = () => {
       setError('Failed to send reset link. Please try again.');
       setMessage('');
     } finally {
-      setLoading(false); // Stop loading
+      setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-gray-800 to-black p-4">
-      <Card className="w-full max-w-md bg-white/95 backdrop-blur-sm shadow-2xl rounded-xl overflow-hidden relative">
-        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#15BACD] to-[#094DA2]" />
-
-        {/* Logo and Title */}
-        <div className="flex flex-col items-center pt-8 pb-4">
-          <div className="flex items-center space-x-2 mb-4">
-            <img
-              src={oneVectorImage}
-              alt="OneVector Logo"
-              className="w-6 h-8 md:w-10 md:h-10"
-            />
-            <h1
-              className="text-2xl md:text-3xl font-medium tracking-wide text-transparent bg-clip-text bg-gradient-to-r from-[#15BACD] to-[#094DA2]"
-            >
-              TalentHub
-            </h1>
-          </div>
-          <p className="text-gray-600 text-center px-6 mb-6">
-            No worries! Enter your email address and we'll send you instructions to reset your password.
-          </p>
-        </div>
-
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="space-y-2">
-              <Input
-                type="email"
-                placeholder="Enter your email address"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#15BACD] focus:border-transparent transition-all duration-200"
+    <div className="min-h-screen flex items-center justify-center bg-white p-4">
+      <div className="w-full max-w-md">
+        <Card className="border border-gray-100 shadow-lg rounded-2xl overflow-hidden">
+          {/* Decorative top bar */}
+          <div className="h-1.5 bg-gradient-to-r from-[#15BACD] to-[#094DA2]" />
+          
+          {/* Logo and Title Section */}
+          <div className="flex flex-col items-center pt-8 md:pt-10 px-6">
+            <div className="flex items-center gap-3 mb-6">
+              <img
+                src={oneVectorImage}
+                alt="OneVector Logo"
+                className="w-8 h-8 md:w-10 md:h-10 object-contain"
               />
+              <h1 className="text-2xl md:text-3xl font-semibold bg-gradient-to-r from-[#15BACD] to-[#094DA2] bg-clip-text text-transparent">
+                TalentHub
+              </h1>
             </div>
+            
+            <div className="mb-8 text-center">
+              <h2 className="text-xl md:text-2xl font-medium text-gray-800 mb-3">
+                Forgot your password?
+              </h2>
+              <p className="text-gray-600 text-sm md:text-base max-w-sm">
+                No worries! Enter your email address and we'll send you instructions to reset your password.
+              </p>
+            </div>
+          </div>
 
-            <Button
-              type="submit"
-              className="w-full py-3 bg-gradient-to-r from-[#15BACD] to-[#094DA2] text-white font-semibold rounded-lg hover:opacity-90 transition-all duration-200 transform hover:scale-[0.99] active:scale-[0.97]"
-              disabled={loading} // Disable button while loading
+          <CardContent className="px-6 md:px-8">
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div>
+                <Input
+                  type="email"
+                  placeholder="Enter your email address"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  className="w-full h-12 px-4 text-gray-800 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#15BACD] focus:border-transparent transition-all duration-200"
+                />
+              </div>
+
+              <Button
+                type="submit"
+                disabled={loading}
+                className="w-full h-12 bg-gradient-to-r from-[#15BACD] to-[#094DA2] text-white font-medium rounded-xl hover:opacity-90 transition-all duration-200 transform hover:scale-[0.99] active:scale-[0.97] disabled:opacity-70"
+              >
+                {loading ? (
+                  <div className="flex items-center justify-center gap-2">
+                    <LoadingSpinner />
+                    <span>Sending...</span>
+                  </div>
+                ) : (
+                  'Send Reset Instructions'
+                )}
+              </Button>
+            </form>
+
+            {/* Success Message */}
+            {message && (
+              <div className="mt-6 p-4 bg-green-50 border border-green-100 rounded-xl">
+                <p className="text-green-700 text-sm text-center">
+                  {message}
+                </p>
+              </div>
+            )}
+
+            {/* Error Message */}
+            {error && (
+              <div className="mt-6 p-4 bg-red-50 border border-red-100 rounded-xl">
+                <p className="text-red-700 text-sm text-center">
+                  {error}
+                </p>
+              </div>
+            )}
+          </CardContent>
+
+          <CardFooter className="flex justify-center pb-8 pt-4">
+            <a 
+              href="/"
+              className="text-sm text-gray-600 hover:text-[#15BACD] transition-colors duration-200 flex items-center gap-2"
             >
-              {loading ? <LoadingSpinner /> : 'Send Reset Instructions'} {/* Show spinner or text */}
-            </Button>
-          </form>
-        </CardContent>
-
-        {message && (
-          <div className="px-6 pb-6">
-            <div className="bg-green-50 border border-green-100 text-green-700 px-4 py-3 rounded-lg text-center text-sm">
-              {message}
-            </div>
-          </div>
-        )}
-
-        {error && (
-          <div className="px-6 pb-6">
-            <div className="bg-red-50 border border-red-100 text-red-700 px-4 py-3 rounded-lg text-center text-sm">
-              {error}
-            </div>
-          </div>
-        )}
-
-        <CardFooter className="flex justify-center pb-8">
-          <a href="/" className="text-sm text-gray-600 hover:text-[#15BACD] transition-colors">
-            Back to Login
-          </a>
-        </CardFooter>
-      </Card>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="transform rotate-180"
+              >
+                <path d="M5 12h14" />
+                <path d="m12 5 7 7-7 7" />
+              </svg>
+              Back to Login
+            </a>
+          </CardFooter>
+        </Card>
+      </div>
     </div>
   );
 };
