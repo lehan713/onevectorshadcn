@@ -88,132 +88,148 @@ const ResetPassword = () => {
   );
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-gray-800 to-black p-4">
-      <Card className="w-full max-w-md bg-white/95 backdrop-blur-sm shadow-2xl rounded-xl overflow-hidden relative">
-        {/* Gradient header line */}
-        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#15BACD] to-[#094DA2]" />
-
-        {/* Logo and Title */}
-        <CardHeader className="flex items-center justify-center space-y-4 py-6">
-          <div className="flex flex-col items-center">
-            <div className="flex items-center space-x-2 mb-2">
+    <div className="min-h-screen flex items-center justify-center bg-white p-4">
+      <div className="w-full max-w-md">
+        <Card className="border border-gray-100 shadow-lg rounded-2xl overflow-hidden">
+          {/* Decorative top bar */}
+          <div className="h-1.5 bg-gradient-to-r from-[#15BACD] to-[#094DA2]" />
+          
+          {/* Logo and Title Section */}
+          <div className="flex flex-col items-center pt-8 md:pt-10 px-6">
+            <div className="flex items-center gap-3 mb-6">
               <img
                 src={oneVectorImage}
                 alt="OneVector Logo"
-                className="w-10 h-10"
+                className="w-8 h-8 md:w-10 md:h-10 object-contain"
               />
-              <h1
-                className="text-3xl font-bold tracking-wide text-transparent bg-clip-text bg-gradient-to-r from-[#15BACD] to-[#094DA2]"
-              >
+              <h1 className="text-2xl md:text-3xl font-semibold bg-gradient-to-r from-[#15BACD] to-[#094DA2] bg-clip-text text-transparent">
                 TalentHub
               </h1>
             </div>
-            <p className="text-gray-600 text-center">
-              Please enter your new password below
-            </p>
-          </div>
-        </CardHeader>
-
-        <CardContent>
-          {isLoading ? (
-            <div className="flex justify-center py-6">
-              <LoadingSpinner />
+            
+            <div className="mb-8 text-center">
+              <h2 className="text-xl md:text-2xl font-medium text-gray-800 mb-3">
+                Reset your password
+              </h2>
+              <p className="text-gray-600 text-sm md:text-base max-w-sm">
+                Please enter your new password below
+              </p>
             </div>
-          ) : (
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="space-y-4">
-                <div className="relative">
+          </div>
+
+          <CardContent className="px-6 md:px-8">
+            {isLoading ? (
+              <div className="flex justify-center py-8">
+                <LoadingSpinner />
+              </div>
+            ) : (
+              <form onSubmit={handleSubmit} className="space-y-6">
+                <div className="space-y-4">
+                  <div className="relative">
+                    <Input
+                      type={showPassword ? "text" : "password"}
+                      placeholder="Enter new password"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      required
+                      className="w-full h-12 px-4 text-gray-800 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#15BACD] focus:border-transparent transition-all duration-200"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                    >
+                      {showPassword ? 
+                        <EyeOffIcon className="h-5 w-5" /> : 
+                        <EyeIcon className="h-5 w-5" />
+                      }
+                    </button>
+                  </div>
+
+                  <div className="bg-gray-50 p-4 rounded-xl space-y-2">
+                    <ValidationItem 
+                      isValid={validations.minLength} 
+                      text="Minimum 8 characters" 
+                    />
+                    <ValidationItem 
+                      isValid={validations.hasUpperCase} 
+                      text="At least one uppercase letter" 
+                    />
+                    <ValidationItem 
+                      isValid={validations.hasNumber} 
+                      text="At least one number" 
+                    />
+                    <ValidationItem 
+                      isValid={validations.hasSpecial} 
+                      text="At least one special character" 
+                    />
+                  </div>
+
                   <Input
                     type={showPassword ? "text" : "password"}
-                    placeholder="Enter new password"
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="Confirm new password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
                     required
-                    className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#15BACD] focus:border-transparent transition-all duration-200"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                  >
-                    {showPassword ? 
-                      <EyeOffIcon className="h-5 w-5" /> : 
-                      <EyeIcon className="h-5 w-5" />
-                    }
-                  </button>
-                </div>
-
-                <div className="bg-gray-50 p-4 rounded-lg space-y-2">
-                  <ValidationItem 
-                    isValid={validations.minLength} 
-                    text="Minimum 8 characters" 
-                  />
-                  <ValidationItem 
-                    isValid={validations.hasUpperCase} 
-                    text="At least one uppercase letter" 
-                  />
-                  <ValidationItem 
-                    isValid={validations.hasNumber} 
-                    text="At least one number" 
-                  />
-                  <ValidationItem 
-                    isValid={validations.hasSpecial} 
-                    text="At least one special character" 
+                    className="w-full h-12 px-4 text-gray-800 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#15BACD] focus:border-transparent transition-all duration-200"
                   />
                 </div>
 
-                <Input
-                  type={showPassword ? "text" : "password"}
-                  placeholder="Confirm new password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  required
-                  className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#15BACD] focus:border-transparent transition-all duration-200"
-                />
+                <Button
+                  type="submit"
+                  disabled={!isPasswordValid}
+                  className="w-full h-12 bg-gradient-to-r from-[#15BACD] to-[#094DA2] text-white font-medium rounded-xl hover:opacity-90 transition-all duration-200 transform hover:scale-[0.99] active:scale-[0.97] disabled:opacity-70"
+                >
+                  Reset Password
+                </Button>
+              </form>
+            )}
+
+            {/* Success Message */}
+            {message && (
+              <div className="mt-6 p-4 bg-green-50 border border-green-100 rounded-xl">
+                <p className="text-green-700 text-sm text-center">
+                  {message}
+                </p>
               </div>
+            )}
 
-              <Button
-                type="submit"
-                disabled={!isPasswordValid}
-                className={`w-full py-3 bg-gradient-to-r from-[#15BACD] to-[#094DA2] text-white font-semibold rounded-lg transition-all duration-200 transform hover:scale-[0.99] active:scale-[0.97] ${!isPasswordValid ? 'opacity-50 cursor-not-allowed' : 'hover:opacity-90'}`}
+            {/* Error Message */}
+            {error && (
+              <div className="mt-6 p-4 bg-red-50 border border-red-100 rounded-xl">
+                <p className="text-red-700 text-sm text-center">
+                  {error}
+                </p>
+              </div>
+            )}
+          </CardContent>
+
+          <CardFooter className="flex justify-center pb-8 pt-4">
+            <button 
+              onClick={() => navigate('/')}
+              className="text-sm text-gray-600 hover:text-[#15BACD] transition-colors duration-200 flex items-center gap-2"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="transform rotate-180"
               >
-                Reset Password
-              </Button>
-            </form>
-          )}
-        </CardContent>
-
-        {message && (
-          <div className="px-6 pb-6">
-            <Alert className="bg-green-50 border border-green-100">
-              <AlertDescription className="text-green-700 text-center">
-                {message}
-              </AlertDescription>
-            </Alert>
-          </div>
-        )}
-
-        {error && (
-          <div className="px-6 pb-6">
-            <Alert className="bg-red-50 border border-red-100">
-              <AlertDescription className="text-red-700 text-center">
-                {error}
-              </AlertDescription>
-            </Alert>
-          </div>
-        )}
-
-        <CardFooter className="flex justify-center pb-8">
-          <button 
-            onClick={() => navigate('/')}
-            className="text-sm text-gray-600 hover:text-[#15BACD] transition-colors"
-          >
-            Back to Login
-          </button>
-        </CardFooter>
-      </Card>
+                <path d="M5 12h14" />
+                <path d="m12 5 7 7-7 7" />
+              </svg>
+              Back to Login
+            </button>
+          </CardFooter>
+        </Card>
+      </div>
     </div>
   );
 };
-
 export default ResetPassword;
