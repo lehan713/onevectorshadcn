@@ -578,13 +578,12 @@ const recentJob = formData.qualifications.length > 0 ? formData.qualifications[0
   {isEditing.personalDetails ? (
     <form onSubmit={(e) => handleSubmit(e, 'personalDetails')}>
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 w-full">
-        <div className="w-full space-y-2">
-          <Label className="text-gray-700 dark:text-gray-300">Username</Label>
-          <Input
-            name="personalDetails.username"
+          <div className="space-y-2">
+                <Label className="text-gray-700 dark:text-gray-300">Username</Label>
+                <Input name="personalDetails.username"
             value={draftData.personalDetails?.username || ''}
-            onChange={handleChange}
-            className="w-full border-gray-300 dark:border-gray-600 focus:border-[#15BACD] focus:ring-[#15BACD]"
+            disabled
+                  className="bg-gray-100 border-gray-300 dark:border-gray-600 cursor-not-allowed"
           />
         </div>
         <div className="w-full space-y-2">
