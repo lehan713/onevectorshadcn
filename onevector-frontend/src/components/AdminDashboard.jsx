@@ -2,8 +2,6 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {  FaHistory, FaSignOutAlt } from 'react-icons/fa';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faCrown } from '@fortawesome/free-solid-svg-icons';
 import {  buttonVariant, modalVariant } from './animations';
 import { motion } from 'framer-motion';
 import { FaCrown } from 'react-icons/fa';
@@ -30,6 +28,31 @@ import {
 } from "@/components/ui/dialog"
 import LoadingSpinner from './LoadingSpinner'; // Add this import
 import TutorialOverlay from './TutorialOverlay';
+import SendingMagicLink from './SendMagic'; // Add this import
+import { Filter, X } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
+import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { HelpCircle } from "lucide-react";
 
 
 function AdminDashboard() {
@@ -55,6 +78,9 @@ function AdminDashboard() {
 const [magicLinks, setMagicLinks] = useState([]);
 const [isSendingMagicLink, setIsSendingMagicLink] = useState(false);
 const { isDarkMode, toggleTheme } = useTheme();
+const [skills, setSkills] = useState([]);
+  const [certifications, setCertifications] = useState([]);
+
 
 const handleDownloadDetails = async () => {
   try {
@@ -144,6 +170,202 @@ const handleDownloadDetails = async () => {
         console.error('Fetch error:', error);
     }
 };
+
+const sanitizeSelectValue = (value) => {
+  return value || 'unspecified'; // Fallback value if empty
+};
+
+const [filters, setFilters] = useState({
+  role: '',
+  availability: '',
+  workAuthorization: '',
+  employmentType: '',
+  workArrangement: '',
+  skills: [],
+  certifications: []
+});
+
+// Function to remove individual filter
+const removeFilter = (type, value) => {
+  setFilters(prev => {
+    const newFilters = { ...prev };
+    if (type === 'skills' || type === 'certifications') {
+      newFilters[type] = prev[type].filter(item => item !== value);
+    } else {
+      newFilters[type] = '';
+    }
+    
+    // Update active filter count
+    const activeFilters = Object.entries(newFilters).filter(([key, val]) => {
+      if (Array.isArray(val)) {
+        return val.length > 0;
+      }
+      return Boolean(val);
+    }).length;
+    
+    setActiveFilterCount(activeFilters);
+    return newFilters;
+  });
+};
+
+const [activeFilterCount, setActiveFilterCount] = useState(0);
+
+const filterOptions = {
+  availability: [
+    { value: "immediate", label: "Immediate" },
+    { value: "2_weeks", label: "2 Weeks Notice" },
+    { value: "1_month", label: "1 Month Notice" },
+    { value: "2_months", label: "2 Months Notice" },
+    { value: "3_months", label: "3+ Months Notice" },
+    { value: "unspecified", label: "Not Specified" }
+  ],
+  workAuthorization: [
+    { value: "us_citizen", label: "US Citizen" },
+    { value: "green_card", label: "Green Card" },
+    { value: "h1b", label: "H1B Visa" },
+    { value: "l1", label: "L1 Visa" },
+    { value: "opt", label: "OPT/CPT" },
+    { value: "other", label: "Other Work Authorization" },
+    { value: "unspecified", label: "Not Specified" }
+  ],
+  employmentType: [
+    { value: "full_time", label: "Full Time" },
+    { value: "part_time", label: "Part Time" },
+    { value: "contract", label: "Contract" },
+    { value: "contract_to_hire", label: "Contract to Hire" },
+    { value: "intern", label: "Internship" },
+    { value: "unspecified", label: "Not Specified" }
+  ],
+  workArrangement: [
+    { value: "onsite", label: "On-site" },
+    { value: "hybrid", label: "Hybrid" },
+    { value: "remote", label: "Remote" },
+    { value: "flexible", label: "Flexible" },
+    { value: "unspecified", label: "Not Specified" }
+  ],
+  role: [
+    { value: "user", label: "User" },
+    { value: "power_user", label: "Power User" }
+  ]
+};
+
+const handleFilterChange = (type, value) => {
+  setFilters(prev => {
+    const newFilters = { ...prev };
+    
+    // Handle arrays for skills and certifications
+    if (type === 'skills' || type === 'certifications') {
+      if (Array.isArray(value)) {
+        newFilters[type] = value;
+      } else if (value && value !== 'no_selection') {
+        newFilters[type] = [...(prev[type] || []), value];
+      }
+    } else {
+      // Handle single values for other filters
+      newFilters[type] = value;
+    }
+
+    // Count active filters
+    const activeFilters = Object.entries(newFilters).filter(([key, val]) => {
+      if (Array.isArray(val)) {
+        return val.length > 0;
+      }
+      return Boolean(val);
+    }).length;
+    
+    setActiveFilterCount(activeFilters);
+    return newFilters;
+  });
+};
+
+
+const resetFilters = () => {
+  setFilters({
+    role: '',
+    availability: '',
+    workAuthorization: '',
+    employmentType: '',
+    workArrangement: '',
+    skills: [],           // Changed to empty array
+    certifications: []    // Changed to empty array
+  });
+  setActiveFilterCount(0);
+};
+
+
+const formatList = (items) => {
+  if (!items || !items.length) return 'None';
+  return items.join(', ');
+};
+
+// Apply filters to candidates
+const applyFilters = (candidates) => {
+  return candidates.filter(candidate => {
+    // Get qualifications safely with optional chaining
+    const qualifications = candidate.details?.qualifications?.[0] || {};
+    const candidateSkills = candidate.details?.skills || [];
+    const candidateCerts = candidate.details?.certifications || [];
+
+    // Check each filter condition
+    const matchesRole = !filters.role || candidate.role === filters.role;
+
+    const matchesAvailability = !filters.availability || 
+      sanitizeSelectValue(qualifications.availability) === filters.availability;
+
+    const matchesWorkAuth = !filters.workAuthorization || 
+      sanitizeSelectValue(qualifications.work_permit_status) === filters.workAuthorization;
+
+    const matchesEmploymentType = !filters.employmentType || 
+      sanitizeSelectValue(qualifications.preferred_role_type) === filters.employmentType;
+
+    const matchesWorkArrangement = !filters.workArrangement || 
+      sanitizeSelectValue(qualifications.preferred_work_arrangement) === filters.workArrangement;
+
+    // Check if ANY of the selected skills match (if skills filter is active)
+    const matchesSkills = filters.skills.length === 0 || 
+      filters.skills.some(skill => candidateSkills.includes(skill));
+
+    // Check if ANY of the selected certifications match (if certifications filter is active)
+    const matchesCertifications = filters.certifications.length === 0 || 
+      filters.certifications.some(cert => candidateCerts.includes(cert));
+
+    // Return true only if ALL conditions are met
+    return matchesRole && 
+           matchesAvailability && 
+           matchesWorkAuth && 
+           matchesEmploymentType && 
+           matchesWorkArrangement && 
+           matchesSkills && 
+           matchesCertifications;
+  });
+};
+
+useEffect(() => {
+  const fetchSkillsAndCertifications = async () => {
+    try {
+      const skillsResponse = await axios.get('http://localhost:3000/api/skills');
+      const certificationsResponse = await axios.get('http://localhost:3000/api/certifications');
+      
+      const skillNames = skillsResponse.data.map(skill => ({
+        value: skill.skill_name,
+        label: skill.skill_name
+      }));
+      const certNames = certificationsResponse.data.map(cert => ({
+        value: cert.certification_name,
+        label: cert.certification_name
+      }));
+      
+      setSkills(skillNames);
+      setCertifications(certNames);
+      filterOptions.skills = skillNames;
+      filterOptions.certifications = certNames;
+    } catch (error) {
+      console.error('Error fetching skills and certifications:', error);
+    }
+  };
+
+  fetchSkillsAndCertifications();
+}, []);
 
 const [candidatesWithDetails, setCandidatesWithDetails] = useState([]);
 
@@ -258,48 +480,48 @@ useEffect(() => {
     }
   };
 
+  
+
   const filterCandidates = (candidates, query) => {
-    if (!query) return candidates;
+    if (!query && !activeFilterCount) return candidates;
     
-    const searchTerm = query.toLowerCase();
-    
-    return candidates.filter(candidate => {
-      // Basic information search
-      const basicMatch = 
-        candidate.username?.toLowerCase().includes(searchTerm) ||
-        candidate.email?.toLowerCase().includes(searchTerm);
-
-      // Personal details search
-      const personalDetails = candidate.details?.personalDetails || {};
-      const personalMatch = 
-        personalDetails.first_name?.toLowerCase().includes(searchTerm) ||
-        personalDetails.last_name?.toLowerCase().includes(searchTerm) ||
-        personalDetails.phone_no?.toLowerCase().includes(searchTerm);
-
-      // Skills search
-      const skillsMatch = candidate.details?.skills?.some(skill => 
-        skill.toLowerCase().includes(searchTerm)
-      );
-
-      // Certifications search
-      const certificationsMatch = candidate.details?.certifications?.some(cert =>
-        cert.toLowerCase().includes(searchTerm)
-      );
-
-      // Qualifications search
-      const qualifications = candidate.details?.qualifications?.[0] || {};
-      const qualificationsMatch = 
-        qualifications.recent_job?.toLowerCase().includes(searchTerm) ||
-        qualifications.preferred_roles?.toLowerCase().includes(searchTerm) ||
-        qualifications.work_permit_status?.toLowerCase().includes(searchTerm) ||
-        qualifications.preferred_role_type?.toLowerCase().includes(searchTerm);
-
-      return basicMatch || personalMatch || skillsMatch || certificationsMatch || qualificationsMatch;
-    });
+    let filteredResults = candidates;
+  
+    // Apply search query if it exists
+    if (query) {
+      const searchTerm = query.toLowerCase();
+      filteredResults = filteredResults.filter(candidate => {
+        const personalDetails = candidate.details?.personalDetails || {};
+        const qualifications = candidate.details?.qualifications?.[0] || {};
+        
+        // Check all searchable fields
+        return [
+          candidate.username,
+          candidate.email,
+          personalDetails.first_name,
+          personalDetails.last_name,
+          personalDetails.phone_no,
+          ...(candidate.details?.skills || []),
+          ...(candidate.details?.certifications || []),
+          qualifications.recent_job,
+          qualifications.preferred_roles,
+          qualifications.work_permit_status,
+          qualifications.preferred_role_type
+        ].some(field => 
+          field?.toLowerCase().includes(searchTerm)
+        );
+      });
+    }
+  
+    // Apply filters if any are active
+    if (activeFilterCount > 0) {
+      filteredResults = applyFilters(filteredResults);
+    }
+  
+    return filteredResults;
   };
 
-   
-  const filteredCandidates = filterCandidates(candidatesWithDetails, searchQuery);
+  const filteredCandidates = applyFilters(filterCandidates(candidatesWithDetails, searchQuery));
 
 
   const handleLogout = () => {
@@ -351,6 +573,11 @@ useEffect(() => {
     } catch {
       alert(`Failed to update role to ${newRole}`);
     }
+  };
+
+  const startTutorial = () => {
+    setShowTutorial(true);
+    localStorage.removeItem('tutorialCompleted');
   };
 
   const confirmDelete = async () => {
@@ -455,7 +682,29 @@ useEffect(() => {
 
     {/* Action Buttons */}
     <div className="flex items-center space-x-2">
-      {/* Dark Mode Toggle Button */}
+            {/* Help Icon with Dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className={cn(
+                    "rounded-full",
+                    isDarkMode ? "hover:bg-gray-700" : "hover:bg-gray-100"
+                  )}
+                >
+                  <HelpCircle className={cn(
+                    "w-5 h-5",
+                    isDarkMode ? "text-gray-300" : "text-gray-600"
+                  )} />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={startTutorial}>
+                  Start Tutorial
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
       <Toggle
         onClick={toggleTheme}
         className={cn(
@@ -519,6 +768,200 @@ useEffect(() => {
       className="w-full md:w-1/2 border border-gray-300 bg-white text-black rounded-xl p-3 focus:ring-2 focus:ring-gray-500 transition-all duration-200 dark:bg-gray-800 dark:text-white dark:border-gray-700"
       data-tutorial="search"
     />
+
+<Sheet>
+          <SheetTrigger asChild>
+            <Button variant="outline" className="flex items-center gap-2">
+              <Filter className="h-4 w-4" />
+              Filters
+              {activeFilterCount > 0 && (
+                <Badge variant="secondary" className="ml-1">
+                  {activeFilterCount}
+                </Badge>
+              )}
+            </Button>
+          </SheetTrigger>
+          <SheetContent className="w-[400px] sm:w-[540px]">
+      <SheetHeader>
+        <div className="flex items-center justify-between">
+          <SheetTitle>Filters</SheetTitle>
+          <Button variant="ghost" size="sm" onClick={resetFilters}>
+            Reset filters
+          </Button>
+        </div>
+      </SheetHeader>
+      <ScrollArea className="h-[calc(100vh-120px)] pr-4">
+        <div className="grid gap-4 py-4">
+          {/* Single select filters with cancel option */}
+          {Object.entries(filterOptions).map(([key, options]) => {
+            if (key !== 'skills' && key !== 'certifications') {
+              return (
+                <div key={key} className="space-y-2">
+                  <label className="text-sm font-medium capitalize">{key.replace(/([A-Z])/g, ' $1')}</label>
+                  <div className="relative">
+                    <Select
+                      value={filters[key]}
+                      onValueChange={(value) => handleFilterChange(key, value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder={`Select ${key.replace(/([A-Z])/g, ' $1').toLowerCase()}`} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {options.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {filters[key] && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="absolute right-8 top-1/2 -translate-y-1/2"
+                        onClick={() => removeFilter(key, filters[key])}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              );
+            }
+            return null;
+          })}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Availability</label>
+                  <Select
+                    value={filters.availability}
+                    onValueChange={(value) => handleFilterChange('availability', value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select availability" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {filterOptions.availability.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Work Authorization</label>
+                  <Select
+                    value={filters.workAuthorization}
+                    onValueChange={(value) => handleFilterChange('workAuthorization', value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select work authorization" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {filterOptions.workAuthorization.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Employment Type</label>
+                  <Select
+                    value={filters.employmentType}
+                    onValueChange={(value) => handleFilterChange('employmentType', value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select employment type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {filterOptions.employmentType.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Work Arrangement</label>
+                  <Select
+                    value={filters.workArrangement}
+                    onValueChange={(value) => handleFilterChange('workArrangement', value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select work arrangement" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {filterOptions.workArrangement.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+        <label className="text-sm font-medium">Skills</label>
+        <Select
+          value={filters.skills.length > 0 ? filters.skills[filters.skills.length - 1] : 'no_selection'}
+          onValueChange={(value) => {
+            if (value && value !== 'no_selection' && !filters.skills.includes(value)) {
+              handleFilterChange('skills', [...filters.skills, value]);
+            }
+          }}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder={`Selected Skills (${filters.skills.length})`} />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="no_selection">Select a skill</SelectItem>
+            {skills.map((skill) => (
+              <SelectItem 
+                key={skill.value} 
+                value={sanitizeSelectValue(skill.value)}
+              >
+                {skill.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="space-y-2">
+        <label className="text-sm font-medium">Certifications</label>
+        <Select
+          value={filters.certifications.length > 0 ? filters.certifications[filters.certifications.length - 1] : 'no_selection'}
+          onValueChange={(value) => {
+            if (value && value !== 'no_selection' && !filters.certifications.includes(value)) {
+              handleFilterChange('certifications', [...filters.certifications, value]);
+            }
+          }}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder={`Selected Certifications (${filters.certifications.length})`} />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="no_selection">Select a certification</SelectItem>
+            {certifications.map((cert) => (
+              <SelectItem 
+                key={cert.value} 
+                value={sanitizeSelectValue(cert.value)}
+              >
+                {cert.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+</div>
+            </ScrollArea>
+          </SheetContent>
+        </Sheet>
 
     {/* Buttons and History Icon */}
     <div className="flex flex-wrap items-center gap-4 sm:gap-6 w-full md:w-auto mt-4 md:mt-0">
@@ -646,7 +1089,7 @@ useEffect(() => {
           >
             {isSendingMagicLink ? (
               <div className="flex items-center justify-center gap-2">
-                <LoadingSpinner />
+                <SendingMagicLink />
                 <span>Sending...</span>
               </div>
             ) : (
@@ -658,105 +1101,114 @@ useEffect(() => {
     </DialogContent>
   </Dialog>
 )}
-  {/* Table section with proper loading state */}
-  {loading ? (
-          <div className="flex justify-center items-center p-8">
-            <LoadingSpinner />
-          </div>
-        ) : (
-          <div className={`bg-white dark:bg-gray-800 shadow-md overflow-hidden mt-8 w-full`}>
-            {filteredCandidates.length ? (
-              <Table className="w-full text-left border-collapse font-roboto-light">
-        <TableHeader className="bg-[#EAF3FF] text-white dark:bg-gray-800 dark:text-white">
-          <TableRow>
-            <TableHead className="py-4 px-6 text-sm font-bold text-black border-r-[2px] border-white dark:text-white dark:border-gray-700">
-              TITLE
-            </TableHead>
-            <TableHead className="py-4 px-6 text-sm font-bold text-black border-r-[2px] border-white dark:text-white dark:border-gray-700">
-              EMAIL
-            </TableHead>
-            <TableHead className="py-4 px-6 text-sm font-bold text-black border-r-[2px] border-white text-center dark:text-white dark:border-gray-700">
-              ROLE
-            </TableHead>
-            <TableHead className="py-4 px-6 text-sm font-bold text-black border-r-[2px] border-white text-center dark:text-white dark:border-gray-700">
-              USERNAME
-            </TableHead>
-            <TableHead className="py-4 px-6 text-sm font-bold text-black text-center dark:text-white dark:border-gray-700">
-              ACTIONS
-            </TableHead>
+ 
+ {loading ? (
+  <div className="flex justify-center items-center p-8">
+    <LoadingSpinner />
+  </div>
+) : (
+  <div className="mt-8 w-full overflow-hidden rounded-lg shadow-md">
+    {filteredCandidates.length ? (
+      <Table className={cn(
+        "w-full border-collapse divide-y divide-gray-200 dark:divide-gray-700",
+        isDarkMode ? "bg-gray-800 text-gray-100" : "bg-white text-gray-900"
+      )}>
+        <TableHeader>
+          <TableRow className={cn(
+            "divide-x",
+            isDarkMode ? "border-gray-700 bg-gray-900 divide-gray-700" : "border-gray-200 bg-gray-50 divide-gray-200"
+          )}>
+            <TableHead className="w-[50px] py-4 px-4 font-semibold border-b">#</TableHead>
+            <TableHead className="py-4 px-4 font-semibold border-b">Name</TableHead>
+            <TableHead className="py-4 px-4 font-semibold border-b">Email</TableHead>
+            <TableHead className="py-4 px-4 font-semibold border-b">Role</TableHead>
+            <TableHead className="py-4 px-4 font-semibold border-b">Availability</TableHead>
+            <TableHead className="py-4 px-4 font-semibold border-b">Preferred Role</TableHead>
+            <TableHead className="py-4 px-4 font-semibold border-b">Skills</TableHead>
+            <TableHead className="py-4 px-4 font-semibold border-b">Certifications</TableHead>
+            <TableHead className="py-4 px-4 font-semibold text-left border-b">Actions</TableHead>
           </TableRow>
         </TableHeader>
-
-        <TableBody className="bg-white dark:bg-gray-900">
+        <TableBody className="divide-y divide-gray-200 dark:divide-gray-700">
           {filteredCandidates.map((candidate, index) => (
-            <TableRow
-              key={candidate.id}
-              className={`border-b border-gray-200 dark:border-gray-700 ${index === filteredCandidates.length - 1 ? '' : 'border-b-2'} hover:bg-transparent dark:hover:bg-gray-700`}
-            >
-              <TableCell className="py-2.5 px-3 text-gray-800 dark:text-white">
-  <div className="flex items-center space-x-2">
-    <span className="font-medium">
-      {candidate.first_name && candidate.last_name
-        ? `${candidate.first_name} ${candidate.last_name}`
-        : candidate.first_name || candidate.last_name || "N/A"}
-    </span>
-    {candidate.role === "power_user" && (
-      <FontAwesomeIcon icon={faCrown} className="text-yellow-500" title="Power User" />
-    )}
-  </div>
-</TableCell>
-
-              <TableCell className="py-2.5 px-3 text-gray-700 dark:text-white">
-                {candidate.email}
-              </TableCell>
-              <TableCell className="py-2.5 px-3 text-center">
-                <span className="text-sm font-medium text-gray-700 dark:text-white">
-                  {candidate.role === "power_user" ? "Power User" : "User"}
-                </span>
-              </TableCell>
-              <TableCell className="py-2.5 px-3 text-center">
-                <span className="font-medium text-[#4F8FD7] dark:text-[#4F8FD7]">
-                  {candidate.username}
-                </span>
-              </TableCell>
-              <TableCell className="py-2.5 px-3 text-center">
-              <div className="flex justify-center items-center gap-2" data-tutorial="actions">
-                  <Button
-                    variant="outline"
-                    onClick={() => toggleRole(candidate)}
-                    className="px-4 py-2 text-sm text-[#4F8FD7] border border-[#4F8FD7] rounded-md hover:bg-[#15ABCD] hover:text-white focus:ring-2 focus:ring-[#4F8FD7] transition-all duration-200 transform hover:scale-105"
-                  >
-                    {candidate.role === "power_user" ? "Demote" : "Promote"}
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    onClick={() => {
-                      setSelectedCandidate(candidate);
-                      setIsDeleteModalOpen(true);
-                    }}
-                    className="px-3 py-2 text-sm bg-red-500 text-white rounded-md hover:bg-red-600 focus:ring-2 focus:ring-red-500 transition-all duration-200 transform hover:scale-105"
-                  >
-                    Delete
-                  </Button>
-                  <Button
-  variant="secondary"
-  onClick={() => handleShowDetails(candidate)}
-  className="px-3 py-2 text-sm bg-gray-800 text-white rounded-md hover:bg-gray-700 focus:ring-2 focus:ring-gray-500 transition-all duration-200 transform hover:scale-105 dark:bg-[#1F2937] dark:hover:bg-[#374151] dark:text-white dark:border dark:border-white"
->
-  Details
-              </Button>
+            <TableRow key={candidate.id} className={cn(
+              "divide-x transition-colors hover:bg-gray-50/50",
+              isDarkMode ? 
+                "divide-gray-700 hover:bg-gray-700/50" : 
+                "divide-gray-200 hover:bg-gray-100/50"
+            )}>
+              <TableCell className="py-4 px-4 font-medium">{index + 1}</TableCell>
+              <TableCell className="py-4 px-4">
+                <div className="flex items-center gap-2">
+                  {candidate.details?.personalDetails?.first_name} {candidate.details?.personalDetails?.last_name}
+                  {candidate.role === "power_user" && (
+                    <FaCrown className="text-yellow-500" />
+                  )}
                 </div>
               </TableCell>
+              <TableCell className="py-4 px-4">{candidate.email}</TableCell>
+              <TableCell className="py-4 px-4">
+                <Badge variant={candidate.role === "power_user" ? "default" : "secondary"}>
+                  {candidate.role === "power_user" ? "Power User" : "User"}
+                </Badge>
+              </TableCell>
+              <TableCell className="py-4 px-4">
+                {candidate.details?.qualifications?.[0]?.availability || 'Not specified'}
+              </TableCell>
+              <TableCell className="py-4 px-4">
+                {candidate.details?.qualifications?.[0]?.preferred_roles || 'Not specified'}
+              </TableCell>
+              <TableCell className="py-4 px-4">
+                <div className="flex flex-wrap gap-1">
+                  {formatList(candidate.details?.skills)}
+                </div>
+              </TableCell>
+              <TableCell className="py-4 px-4">
+                <div className="flex flex-wrap gap-1">
+                  {formatList(candidate.details?.certifications)}
+                </div>
+              </TableCell>
+              <TableCell className="py-4 px-4">
+      <div className="flex justify-end gap-2" data-tutorial="actions">
+        <Button
+          variant="outline"
+          onClick={() => toggleRole(candidate)}
+          size="sm"
+          className="text-[#4F8FD7] border border-[#4F8FD7] hover:bg-[#15ABCD] hover:text-white focus:ring-2 focus:ring-[#4F8FD7] transition-all duration-200 transform hover:scale-105"
+        >
+          {candidate.role === "power_user" ? "Demote" : "Promote"}
+        </Button>
+        <Button
+          variant="destructive"
+          onClick={() => {
+            setSelectedCandidate(candidate);
+            setIsDeleteModalOpen(true);
+          }}
+          size="sm"
+          className="bg-red-500 text-white hover:bg-red-600 focus:ring-2 focus:ring-red-500 transition-all duration-200 transform hover:scale-105"
+        >
+          Delete
+        </Button>
+        <Button
+          variant="secondary"
+          onClick={() => handleShowDetails(candidate)}
+          size="sm"
+          className="bg-gray-800 text-white hover:bg-gray-700 focus:ring-2 focus:ring-gray-500 transition-all duration-200 transform hover:scale-105 dark:bg-[#1F2937] dark:hover:bg-[#374151] dark:text-white dark:border dark:border-white"
+        >
+          Details
+        </Button>
+      </div>
+    </TableCell>
             </TableRow>
           ))}
         </TableBody>
       </Table>
-     ) : (
+    ) : (
       <p className="p-4 text-center text-gray-800 dark:text-white">No candidates found.</p>
     )}
   </div>
-        )
-      }
+)}
+       
 </main>
   {/* History Modal */}
       {historyModalOpen && (
@@ -891,6 +1343,7 @@ useEffect(() => {
     Confirm
   </motion.button>
 </div>
+
  </motion.div>
         </motion.div>
       )}
@@ -898,6 +1351,7 @@ useEffect(() => {
   <TutorialOverlay onClose={() => setShowTutorial(false)} />
 )}
     </div>
+    
   );
 }
 
