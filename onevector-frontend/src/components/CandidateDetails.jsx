@@ -1,57 +1,38 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useLocation, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
+import './CandidateDetails.css';
+import oneVectorImage from './images/onevector.png';
+import * as XLSX from 'xlsx';
+import { saveAs } from 'file-saver';
+import { useTheme } from "../ThemeContext"; // Ensure correct import path
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Tabs, TabsContent} from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
-import TalentHubImage from './images/talenthub.png';
-import { Eye, EyeOff } from "lucide-react";
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { CheckCircle2, AlertCircle } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { Home, ChevronRight, LogOut, Eye, Download, Edit2 } from 'lucide-react';
+import { cn } from "@/lib/utils";
+import { Toggle } from "@/components/ui/toggle";
+import {SunIcon, MoonIcon } from '@heroicons/react/solid';
+import { SkillsEditForm, CertificationsEditForm } from './EditSandC';
 import LoadingSpinner from './LoadingSpinner';
-import { X } from 'lucide-react';
-import { Save } from 'lucide-react';
 
-const OnboardingForm = () => {
+
+function CandidateDetails() {
+    const location = useLocation();
+    const candidate = location.state?.candidate; // Get candidate data from the state
     const navigate = useNavigate();
-    const [step, setStep] = useState(1);
-    const [showPassword, setShowPassword] = useState(false);
-const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-const [confirmPassword, setConfirmPassword] = useState('');
-const [passwordError, setPasswordError] = useState('');
-const [confirmPasswordError, setConfirmPasswordError] = useState('');
-const [isLoading, setIsLoading] = useState(false);
-    // Personal Information States
-    const [firstName, setFirstName] = useState('');
-    const [lastName, setLastName] = useState('');
-    const [phoneNo, setPhoneNo] = useState('');
-    const [addressLine1, setAddressLine1] = useState('');
-    const [addressLine2, setAddressLine2] = useState('');
-    const [city, setCity] = useState('');
-    const [state, setState] = useState('');
-    const [country, setCountry] = useState('');
-    const [postalCode, setPostalCode] = useState('');
-    const [linkedinUrl, setLinkedinUrl] = useState('');
-    const [username, setUsername] = useState('');
-    const [password, setPassword] = useState('');
-    const [email, setEmail] = useState('');
-
-    // Qualifications States
-    const [recentJob, setRecentJob] = useState('');
-    const [preferredRoles, setPreferredRoles] = useState('');
-    const [availability, setAvailability] = useState('');
-    const [workPermitStatus, setWorkPermitStatus] = useState('');
-    const [preferredRoleType, setPreferredRoleType] = useState('');
-    const [preferredWorkArrangement, setPreferredWorkArrangement] = useState('');
-   
-    const [compensation, setCompensation] = useState('');  // Update this to manage the compensation input
-    const [resume, setResume] = useState(null);
-    const [skills, setSkills] = useState([]);
+    const [details, setDetails] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState('');
+    const [candidates, setCandidates] = useState([]);
+    const [isEditing, setIsEditing] = useState({
+        personal: false,
+        qualifications: false,
+        skills: false,
+        certifications: false
+    });
+const [skills, setSkills] = useState([]);
     const [certifications, setCertifications] = useState([]);
     const [selectedSkills, setSelectedSkills] = useState([]);
     const [selectedCertifications, setSelectedCertifications] = useState([]);
@@ -62,1173 +43,933 @@ const [isLoading, setIsLoading] = useState(false);
     // New state to manage dropdown visibility
     const [isSkillsDropdownOpen, setIsSkillsDropdownOpen] = useState(false);
     const [isCertificationsDropdownOpen, setIsCertificationsDropdownOpen] = useState(false);
-    const [showCompletionAlert, setShowCompletionAlert] = useState(true);
-    const [formSaved, setFormSaved] = useState(false);
-const [savedResume, setSavedResume] = useState(null);
 
-    useEffect(() => {
-      const fetchSkillsAndCertifications = async () => {
-        setIsLoading(true);
-        try {
+    const [formData, setFormData] = useState({
+        personalDetails: {},
+        qualifications: {},
+        skills: [],
+        username: '',
+        certifications: []
+    });
+    const [resumeFile, setResumeFile] = useState(null); // For handling resume file upload
+    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+    const { isDarkMode, toggleTheme } = useTheme();
+    const [originalData, setOriginalData] = useState({
+      personalDetails: {},
+      qualifications: {},
+      skills: [],
+      certifications: []
+  });
+  const [draftData, setDraftData] = useState({
+    personalDetails: {},
+    qualifications: {},
+    skills: [],
+    certifications: []
+});
+
+useEffect(() => {
+  const fetchSkillsAndCertifications = async () => {
+      try {
           const skillsResponse = await axios.get('http://localhost:3000/api/skills');
           setSkills(skillsResponse.data.map(skill => skill.skill_name));
-    
+
           const certificationsResponse = await axios.get('http://localhost:3000/api/certifications');
           setCertifications(certificationsResponse.data.map(cert => cert.certification_name));
-        } catch (error) {
+      } catch (error) {
           console.error('Error fetching skills and certifications:', error);
-        } finally {
-          setIsLoading(false);
-        }
-      };
-    
-      fetchSkillsAndCertifications();
-    }, []);
-
-    useEffect(() => {
-      try {
-        const savedEmail = localStorage.getItem("magicLinkEmail") || sessionStorage.getItem("magicLinkEmail");
-        console.log("Retrieved email:", savedEmail); // Debugging log
-        if (savedEmail) {
-          setEmail(savedEmail);
-        }
-      } catch (error) {
-        console.error("Error accessing localStorage:", error);
       }
-    }, []);
-
-    const handleClearResume = () => {
-      setResume(null);
-      // Reset the file input
-      const fileInput = document.getElementById('resume');
-      if (fileInput) fileInput.value = '';
-    };
-  
-    const handleNext = async (event) => {
-      event.preventDefault();
-  
-      if (step === 1 || step === 2) {
-        setStep(step + 1);
-      } else if (step === 3) {
-        const formData = new FormData();
-        
-        // Append all form data
-        formData.append('first_name', firstName);
-        formData.append('last_name', lastName);
-        formData.append('phone_no', phoneNo);
-        formData.append('address_line1', addressLine1);
-        formData.append('address_line2', addressLine2);
-        formData.append('city', city);
-        formData.append('state', state);
-        formData.append('country', country);
-        formData.append('postal_code', postalCode);
-        formData.append('linkedin_url', linkedinUrl);
-        formData.append('username', username);
-        formData.append('password', password);
-        formData.append('email', email);
-        formData.append('recent_job', recentJob);
-        formData.append('preferred_roles', preferredRoles);
-        formData.append('availability', availability);
-        formData.append('work_permit_status', workPermitStatus);
-        formData.append('preferred_role_type', preferredRoleType);
-        formData.append('preferred_work_arrangement', preferredWorkArrangement);
-        formData.append('compensation',compensation);
-        formData.append('resume', resume);
-  
-        // Append selected skills and certifications
-        selectedSkills.forEach(skill => formData.append('skills[]', skill));
-        selectedCertifications.forEach(cert => formData.append('certifications[]', cert));
-  
-        // Add new skills and certifications if provided
-        if (newSkill) {
-          formData.append('skills[]', newSkill);
-          setNewSkill(''); // Clear the input after submission
-        }
-  
-        if (newCertification) {
-          formData.append('certifications[]', newCertification);
-          setNewCertification(''); // Clear the input after submission
-        }
-  
-        try {
-          const response = await axios.post('http://localhost:3000/api/submit-candidate', formData, {
-            headers: {
-              'Content-Type': 'multipart/form-data',
-            },
-          });
-          navigate('/success');
-        } catch (error) {
-          console.error('Error submitting the form:', error);
-          alert('An error occurred while submitting the form. Please try again later.');
-        } finally {
-          setIsLoading(false); // Hide loader
-        }
-      }
-    };
-    
-    useEffect(() => {
-    const loadSavedData = () => {
-      try {
-        const savedData = localStorage.getItem('onboardingFormData');
-        if (savedData) {
-          const parsedData = JSON.parse(savedData);
-          
-          // Personal Details
-          setFirstName(parsedData.firstName || '');
-          setLastName(parsedData.lastName || '');
-          setPhoneNo(parsedData.phoneNo || '');
-          setAddressLine1(parsedData.addressLine1 || '');
-          setAddressLine2(parsedData.addressLine2 || '');
-          setCity(parsedData.city || '');
-          setState(parsedData.state || '');
-          setCountry(parsedData.country || '');
-          setPostalCode(parsedData.postalCode || '');
-          setLinkedinUrl(parsedData.linkedinUrl || '');
-          setUsername(parsedData.username || '');
-          setEmail(parsedData.email || '');
-  
-          // Professional Information
-          setRecentJob(parsedData.recentJob || '');
-          setPreferredRoles(parsedData.preferredRoles || '');
-          setAvailability(parsedData.availability || '');
-          setWorkPermitStatus(parsedData.workPermitStatus || '');
-          setPreferredRoleType(parsedData.preferredRoleType || '');
-          setPreferredWorkArrangement(parsedData.preferredWorkArrangement || '');
-          setCompensation(parsedData.compensation || '');
-          
-          // Skills and Certifications
-          setSelectedSkills(parsedData.selectedSkills || []);
-          setSelectedCertifications(parsedData.selectedCertifications || []);
-  
-          // Handle Resume
-          if (parsedData.savedResume) {
-            setSavedResume(parsedData.savedResume);
-            // Only set the resume if it's a new session
-            if (!resume) {
-              const { name, type } = parsedData.savedResume;
-              // Create a placeholder file object
-              const placeholderFile = new Blob([''], { type });
-              const file = new File([placeholderFile], name, { type });
-              setResume(file);
-            }
-          }
-        }
-      } catch (error) {
-        console.error('Error loading saved form data:', error);
-      }
-    };
-  
-    loadSavedData();
-  }, []);
-
-  // Add this function to handle form saving
-const handleSaveProgress = () => {
-  const formData = {
-    firstName,
-    lastName,
-    phoneNo,
-    addressLine1,
-    addressLine2,
-    city,
-    state,
-    country,
-    postalCode,
-    linkedinUrl,
-    username,
-    email,
-    recentJob,
-    preferredRoles,
-    availability,
-    workPermitStatus,
-    preferredRoleType,
-    preferredWorkArrangement,
-    compensation,
-
-    selectedSkills,
-    selectedCertifications,
-    savedResume: resume ? {
-      name: resume.name,
-      type: resume.type,
-      lastModified: resume.lastModified
-    } : null
   };
 
-  localStorage.setItem('onboardingFormData', JSON.stringify(formData));
-  setFormSaved(true);
-  
-  // Show success message
-  setTimeout(() => setFormSaved(false), 3000);
+  fetchSkillsAndCertifications();
+}, []);
+
+// Update useEffect to initialize data
+useEffect(() => {
+    if (candidate?.id) {
+        fetchPersonalDetails(candidate.id);
+    }
+}, [candidate]);
+
+const fetchPersonalDetails = async (id) => {
+    try {
+        const response = await axios.get(`http://localhost:3000/api/personalDetails/${id}`);
+        const initialData = {
+            personalDetails: {
+                ...response.data.personalDetails,
+                username: candidate.username // Include username from candidate data
+            } || {},
+            qualifications: response.data.qualifications?.length > 0 ? response.data.qualifications : [{}],
+
+            skills: response.data.skills || [],
+            certifications: response.data.certifications || []
+        };
+        setDetails(response.data);
+        setFormData(initialData);
+    } catch (err) {
+        setError('Failed to fetch personal details');
+        console.error(err);
+    } finally {
+        setLoading(false);
+    }
 };
 
+const toggleSkillsDropdown = () => {
+  setIsSkillsDropdownOpen(!isSkillsDropdownOpen);
+};
 
-    const handlePrevious = () => {
-      if (step > 1) {
-        setStep(step - 1);
-      }
-    };
+const toggleCertificationsDropdown = () => {
+  setIsCertificationsDropdownOpen(!isCertificationsDropdownOpen);
+};
 
-    const handleRemoveSkill = (skillToRemove) => {
-      setSelectedSkills((prevSkills) => 
-        prevSkills.filter((skill) => skill !== skillToRemove)
-      );
-    };
-    
-    const handleRemoveCertification = (certToRemove) => {
-      setSelectedCertifications((prevCerts) => 
-        prevCerts.filter((cert) => cert !== certToRemove)
-      );
-    };
-
-  const handleAddSkill = () => {
-      if (newSkill && !skills.includes(newSkill)) {
-          setSkills([...skills, newSkill]);
-          setSelectedSkills([...selectedSkills, newSkill]); // Automatically select the new skill
-          setNewSkill(''); // Clear the input
-      }
-  };
-
-  const handleAddCertification = () => {
-      if (newCertification && !certifications.includes(newCertification)) {
-          setCertifications([...certifications, newCertification]);
-          setSelectedCertifications([...selectedCertifications, newCertification]); // Automatically select the new certification
-          setNewCertification(''); // Clear the input
-      }
-  };
-
-  const toggleSkillsDropdown = () => {
-      setIsSkillsDropdownOpen(!isSkillsDropdownOpen);
-  };
-
-  const toggleCertificationsDropdown = () => {
-      setIsCertificationsDropdownOpen(!isCertificationsDropdownOpen);
-  };
-
-  const handleSkillSelect = (skill) => {
-      if (!selectedSkills.includes(skill)) {
-          setSelectedSkills([...selectedSkills, skill]);
-      }
-      setIsSkillsDropdownOpen(false); // Close the dropdown after selection
-  };
-
-  const handleCertificationSelect = (certification) => {
-      if (!selectedCertifications.includes(certification)) {
-          setSelectedCertifications([...selectedCertifications, certification]);
-      }
-      setIsCertificationsDropdownOpen(false); // Close the dropdown after selection
-  };
-
-  // Modify the resume upload handler
-const handleResumeUpload = (e) => {
-  const file = e.target.files[0];
-  if (file) {
-    setResume(file);
-    setSavedResume({
-      name: file.name,
-      type: file.type,
-      lastModified: file.lastModified
-    });
+const handleSkillSelect = (skill) => {
+  if (!selectedSkills.includes(skill)) {
+      setSelectedSkills([...selectedSkills, skill]);
   }
+  setIsSkillsDropdownOpen(false); // Close the dropdown after selection
 };
 
-  const steps = [
-    { id: 1, title: 'Personal Details' },
-    { id: 2, title: 'Qualifications' },
-    { id: 3, title: 'Skills & Certifications' }
-  ];
+const handleCertificationSelect = (certification) => {
+  if (!selectedCertifications.includes(certification)) {
+      setSelectedCertifications([...selectedCertifications, certification]);
+  }
+  setIsCertificationsDropdownOpen(false); // Close the dropdown after selection
+};
 
 
-  const [showWelcome, setShowWelcome] = React.useState(true);
-  const [formProgress, setFormProgress] = React.useState(0);
-  const [lastActive, setLastActive] = React.useState(null);
+const handleEditToggle = (section) => {
+  console.log('Toggling edit mode for section:', section);
+  console.log('Current editing state:', isEditing);
+  
+  if (!isEditing[section]) {
+      setDraftData({
+          ...draftData,
+          [section]: section === 'personalDetails'
+              ? { ...formData.personalDetails }
+              : [...formData[section]]
+      });
+  }
+  
+  setIsEditing(prevState => {
+      const newState = {
+          ...prevState,
+          [section]: !prevState[section]
+      };
+      console.log('New editing state:', newState);
+      return newState;
+  });
+};
+// Update handleChange to modify draft data instead of actual data
+const handleChange = (e) => {
+  const { name, value } = e.target;
+  
+  if (name.startsWith('personalDetails.')) {
+      const field = name.split('.')[1];
+      setDraftData(prev => ({
+          ...prev,
+          personalDetails: {
+              ...prev.personalDetails,
+              [field]: value
+          }
+      }));
+  } else if (name.startsWith('qualification_')) {
+        const [, index, field] = name.split('_');
+        setDraftData(prev => {
+            const updatedQualifications = [...prev.qualifications];
+            if (!updatedQualifications[index]) {
+                updatedQualifications[index] = {};
+            }
+            updatedQualifications[index] = {
+                ...updatedQualifications[index],
+                [field]: value
+            };
+            return {
+                ...prev,
+                qualifications: updatedQualifications
+            };
+        });
+    }
+};
 
-  React.useEffect(() => {
-    const requiredFields = {
-      step1: ['username', 'password', 'firstName', 'lastName', 'linkedinUrl'],
-      step2: ['recentJob', 'availability', 'workPermitStatus', 'compensation','resume'],
-      step3: ['selectedSkills', 'selectedCertifications'] // Added selectedCertifications
+      // Prepare the data for Excel export
+      const handleDownloadDetails = () => {
+        // Prepare data for row-by-row export
+        const rowData = [
+            // Header Row
+            ['Candidate Details'],
+            [], // Empty row for spacing
+    
+            // Personal Details Section
+            ['Personal Details'],
+            ['Username', candidate.username || 'N/A'],
+            ['First Name', formData.personalDetails?.first_name || 'N/A'],
+            ['Last Name', formData.personalDetails?.last_name || 'N/A'],
+            ['Phone Number', formData.personalDetails?.phone_no || 'N/A'],
+            ['City', formData.personalDetails?.city || 'N/A'],
+            ['State', formData.personalDetails?.state || 'N/A'],
+            ['Postal Code', formData.personalDetails?.postal_code || 'N/A'],
+            ['Address', formData.personalDetails?.address_line1 || 'N/A'],
+            ['LinkedIn URL', formData.personalDetails?.linkedin_url || 'N/A'],
+            [], // Empty row for separation
+    
+            // Qualifications Section
+            ['Qualifications'],
+        ...formData.qualifications.flatMap((qual) => [
+            ['Recent Job', qual.recent_job || 'N/A'],
+            ['Preferred Roles', qual.preferred_roles || 'N/A'],
+            ['Availability', qual.availability || 'N/A'],
+            ['Compensation', qual.compensation || 'N/A'],
+            ['Preferred Role Type', qual.preferred_role_type || 'N/A'],
+            ['Preferred Work Arrangement', qual.preferred_work_arrangement || 'N/A'],
+            [] // Empty row between qualification sets
+        ]),
+    
+            // Skills Section
+            ['Skills', formData.skills.join(', ') || 'N/A'],
+            [], // Empty row for separation
+    
+            // Certifications Section
+            
+            ['Certifications', formData.certifications.join(', ') || 'N/A']
+        ];
+    
+        // Create workbook and worksheet
+        const workbook = XLSX.utils.book_new();
+        const worksheet = XLSX.utils.aoa_to_sheet(rowData);
+    
+        // Style for header rows
+        const headerStyle = {
+            font: { bold: true, color: { rgb: "FFFFFF" } },
+            fill: { fgColor: { rgb: "4472C4" } }
+        };
+    
+        // Apply styling to section headers
+        ['A1', 'A3', 'A12', 'A24', 'A26'].forEach(cell => {
+            if (worksheet[cell]) {
+                worksheet[cell].s = headerStyle;
+            }
+        });
+    
+        // Adjust column widths
+        worksheet['!cols'] = [
+            { wch: 30 },  // First column
+            { wch: 50 }   // Second column
+        ];
+    
+        // Add the worksheet to the workbook
+        XLSX.utils.book_append_sheet(workbook, worksheet, 'Candidate Details');
+    
+        // Generate Excel file
+        const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+        
+        // Create and save the file
+        const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        saveAs(blob, `${candidate.username}_details.xlsx`);
     };
 
-    const filledFields = {
-      step1: [username, password, firstName, lastName, linkedinUrl].filter(Boolean).length,
-      step2: [recentJob, availability, workPermitStatus,compensation, resume].filter(Boolean).length,
-      step3: [
-        selectedSkills.length > 0,
-        selectedCertifications.length > 0 // Added certification check
-      ].filter(Boolean).length
+  // Fixed handleSubmit function
+  const handleSubmit = async (e, section) => {
+    e.preventDefault();
+    if (!details?.personalDetails?.id) {
+        setError('No ID found for update');
+        return;
+    }
+
+    try {
+        const id = details.personalDetails.id;
+        const formDataToSubmit = new FormData();
+
+        switch (section) {
+            case 'personalDetails':
+                Object.entries(draftData.personalDetails).forEach(([key, value]) => {
+                    formDataToSubmit.append(key, value);
+                });
+                if (resumeFile) {
+                    formDataToSubmit.append('resume', resumeFile);
+                }
+                await axios.put(`http://localhost:3000/api/candidates/${id}/personal`, formDataToSubmit, {
+                    headers: { 'Content-Type': 'multipart/form-data' }
+                });
+                // Update actual data after successful submit
+                setFormData(prev => ({
+                    ...prev,
+                    personalDetails: draftData.personalDetails
+                }));
+                break;
+
+                case 'qualifications':
+                  console.log("Qualifications data being sent:", formData.qualifications);  // Check the structure here
+                
+                  await axios.put(`http://localhost:3000/api/candidates/${id}/qualifications`, {
+                    qualifications: draftData.qualifications
+                  }, {
+                    headers: { 'Content-Type': 'application/json' }
+                  });
+                  setFormData(prev => ({
+                    ...prev,
+                    qualifications: draftData.qualifications
+                  }));
+                  break;
+                
+              case 'skills':
+                  await axios.put(`http://localhost:3000/api/candidates/${id}/skills`, {
+                      skills: formData.skills
+                  });
+                  break;
+
+              case 'certifications':
+                  await axios.put(`http://localhost:3000/api/candidates/${id}/certifications`, {
+                      certifications: formData.certifications
+                  });
+                  break;
+          }
+          handleEditToggle(section);
+    } catch (err) {
+        setError(`Failed to update ${section}: ${err.message}`);
+    }
     };
 
+    const handleAddSkill = () => {
+      if (newSkill.trim()) {
+        setFormData({
+          ...formData,
+          skills: [...formData.skills, newSkill.trim()]
+        });
+        setNewSkill('');
+      }
+    };
+    
+    const handleRemoveSkill = (index) => {
+      const newSkills = formData.skills.filter((_, i) => i !== index);
+      setFormData({
+        ...formData,
+        skills: newSkills
+      });
+    };
+    
+    const handleAddCertification = () => {
+      if (newCertification.trim()) {
+        setFormData({
+          ...formData,
+          certifications: [...formData.certifications, newCertification.trim()]
+        });
+        setNewCertification('');
+      }
+    };
+    
+    const handleRemoveCertification = (index) => {
+      const newCertifications = formData.certifications.filter((_, i) => i !== index);
+      setFormData({
+        ...formData,
+        certifications: newCertifications
+      });
+    };
+    
 
-       const totalProgress = (
-      (filledFields.step1 / requiredFields.step1.length +
-        filledFields.step2 / requiredFields.step2.length +
-        filledFields.step3 / requiredFields.step3.length) /
-      3
-    ) * 100;
+    const handleResumeUpload = async () => {
+        if (!resumeFile) {
+            setError('Please select a resume file to upload');
+            return;
+        }
+        
+        const formData = new FormData();
+        formData.append('resume', resumeFile);
+        
+        try {
+            const response = await axios.post('http://localhost:3000/api/uploadResume', formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data'
+                }
+            });
+            // Handle success - maybe show a success message
+            console.log('Resume uploaded successfully:', response.data);
+        } catch (error) {
+            setError('Failed to upload resume');
+        }
+    };
 
-    setFormProgress(Math.round(totalProgress));
-  }, [username, password, firstName, lastName, linkedinUrl, recentJob, availability, workPermitStatus,compensation, resume, selectedSkills, selectedCertifications]);
+    const handleDownloadResume = async () => {
+           try {
+               const resumeUrl = `http://localhost:3000/api/resume/${details.personalDetails.id}`;
+               window.open(resumeUrl, '_blank'); // Opens the resume in a new tab
+             } catch (error) {
+               alert('Failed to view resume');
+             }
+   };
 
+   const handleResumeChange = (e, index) => {
+    const file = e.target.files[0]; // Get the uploaded file
+    if (file) {
+      const updatedQualifications = [...formData.qualifications];
+      updatedQualifications[index].resume_path = file.name; // Update the resume_path with the file name
+      setFormData({
+        ...formData,
+        qualifications: updatedQualifications,
+      });
+    }
+  };
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-100 p-4">
-      {isLoading && <LoadingSpinner />}
-      
-      {/* Updated Header Section with mobile responsiveness */}
-      <div className="flex items-center mb-6 md:justify-center md:space-x-4 pl-2">
-        <img 
-          src={TalentHubImage}
-          alt="TalentHub" 
-          className="h-8 md:h-12"
-        />
-        <h1 className="text-3xl md:text-3xl ml-2 font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#15BACD] to-[#094DA2]">
-          TalentHub
-        </h1>
-      </div>
+    const handleLogout = () => {
+      localStorage.removeItem('token');
+      navigate('/');
+    };
+    
+const recentJob = formData.qualifications.length > 0 ? formData.qualifications[0].recent_job : 'No Recent Job';
 
-      {/* Progress indicator with mobile responsiveness */}
-      <div className="fixed top-4 right-4 z-50">
-        <div className="relative w-12 h-12 md:w-16 md:h-16">
-          <svg className="w-full h-full" viewBox="0 0 36 36">
-            <path
-              d="M18 2.0845
-                a 15.9155 15.9155 0 0 1 0 31.831
-                a 15.9155 15.9155 0 0 1 0 -31.831"
-              fill="none"
-              stroke="#E2E8F0"
-              strokeWidth="3"
-            />
-            <path
-              d="M18 2.0845
-                a 15.9155 15.9155 0 0 1 0 31.831
-                a 15.9155 15.9155 0 0 1 0 -31.831"
-              fill="none"
-              stroke="#353939"
-              strokeWidth="3"
-              strokeDasharray={`${formProgress}, 100`}
-              className="transform -rotate-90 origin-center"
-            />
-          </svg>
-          <div className="absolute inset-0 flex items-center justify-center">
-            <span className="text-xs md:text-sm font-semibold text-[#353939]">{formProgress}%</span>
-          </div>
-        </div>
-      </div>
+  
 
+         return (
+          <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+          {loading ? (
+              <div className="flex items-center justify-center min-h-screen">
+                  <LoadingSpinner />
+              </div>
+          ) : (
+            <>
 
-        {showWelcome && (
-  <motion.div
-    initial={{ opacity: 0, y: 20 }}
-    animate={{ opacity: 1, y: 0 }}
-    exit={{ opacity: 0, y: -20 }}
-    className="max-w-2xl mx-auto mb-6 mt-18"
-  >
-    <Card className="bg-white/95 backdrop-blur-sm shadow-xl border border-gray-200">
-      <CardContent className="p-12">
-        <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="text-center">
-          <h1 className="text-4xl sm:text-5xl font-bold text-[#353939] mb-8">
-            Welcome to TalentHub!
-          </h1>
-          
-          <div className="space-y-8 mb-10">
-            <p className="text-lg sm:text-xl text-gray-600">
-              Complete your professional profile in three simple steps:
-            </p>
+ {/* Header Section */}
+ <header
+   className={cn(
+     "fixed top-0 left-0 right-0 z-10 shadow-md",
+     isDarkMode ? "bg-gray-800" : "bg-white"
+   )}
+ >
+   <div className="flex justify-between items-center p-2 sm:p-4 w-full">
+     {/* Logo and Title */}
+     <div className="flex items-center space-x-2">
+       <img
+         src={oneVectorImage}
+         alt="OneVector Logo"
+         className="w-5 h-6 sm:w-8 sm:h-8"
+       />
+       <h1
+         className={cn(
+           "text-lg sm:text-2xl font-medium tracking-wide",
+           "text-transparent bg-clip-text bg-gradient-to-r from-[#15BACD] to-[#094DA2]"
+         )}
+       >
+         TalentHub
+       </h1>
+     </div>
+ 
+     {/* Action Buttons */}
+     <div className="flex items-center space-x-2">
+       {/* Dark Mode Toggle Button */}
+       <Toggle
+         onClick={toggleTheme}
+         className={cn(
+           "p-1 sm:p-2 rounded-full",
+           isDarkMode
+             ? "bg-gray-700 hover:bg-gray-600"
+             : "bg-gray-200 hover:bg-gray-300"
+         )}
+       >
+         {isDarkMode ? (
+           <SunIcon className="w-4 h-4 sm:w-5 sm:h-5 text-gray-100" />
+         ) : (
+           <MoonIcon className="w-4 h-4 sm:w-5 sm:h-5 text-gray-800" />
+         )}
+       </Toggle>
+ 
+       {/* Logout Button */}
+       <Button
+         variant="outline"
+         onClick={handleLogout}
+         className={cn(
+           "px-3 sm:px-4 py-1 sm:py-2 h-8 sm:h-10 rounded-full flex items-center justify-center space-x-2 text-sm sm:text-base font-semibold transition-all",
+           isDarkMode
+             ? "bg-gradient-to-r from-red-500 to-red-700 text-white hover:from-red-600 hover:to-red-800"
+             : "bg-gradient-to-r from-red-400 to-red-600 text-white hover:from-red-500 hover:to-red-700"
+         )}
+       >
+         <svg
+           xmlns="http://www.w3.org/2000/svg"
+           fill="none"
+           viewBox="0 0 24 24"
+           strokeWidth="1.5"
+           stroke="currentColor"
+           className="w-4 h-4 sm:w-5 sm:h-5"
+         >
+           <path
+             strokeLinecap="round"
+             strokeLinejoin="round"
+             d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-7.5A2.25 2.25 0 003.75 5.25v13.5A2.25 2.25 0 006 21h7.5a2.25 2.25 0 002.25-2.25V15"
+           />
+           <path
+             strokeLinecap="round"
+             strokeLinejoin="round"
+             d="M18 12H9m0 0l3-3m-3 3l3 3"
+           />
+         </svg>
+         <span>Logout</span>
+       </Button>
+     </div>
+   </div>
+ </header>
+ 
+      {/* Main Content */}
+<div className="px-4 py-8 sm:px-6 sm:py-12">
+  {/* Breadcrumb */}
+  <div className="flex items-center space-x-2 mt-8 mb-4">
+    <Button
+      variant="ghost"
+      size="sm"
+      onClick={() => navigate('/admin-dashboard')}
+      className={cn(
+        "gap-2 px-2 py-1 rounded-md text-sm sm:text-base transition-all",
+        isDarkMode
+          ? "hover:bg-gray-600 text-white"
+          : "bg-gray-100 hover:bg-gray-200 text-gray-800"
+      )}
+    >
+      <Home className="h-4 w-4 sm:h-6 sm:w-6" />
+      Dashboard
+    </Button>
+    <ChevronRight className="h-3 w-3 sm:h-4 sm:w-4 text-gray-400" />
+    <span className="text-sm sm:text-base text-gray-600 dark:text-gray-400">
+      Candidate Details
+    </span>
+  </div>
 
-            {/* Creative Steps Display */}
-            <div className="flex flex-col space-y-6 max-w-lg mx-auto">
-              <motion.div 
-                className="flex items-center space-x-4 group"
-                whileHover={{ x: 10 }}
-                transition={{ type: "spring", stiffness: 300 }}
-              >
-                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#15BACD] to-[#094DA2] flex items-center justify-center flex-shrink-0 shadow-lg group-hover:shadow-[#15BACD]/20">
-                  <span className="text-xl font-bold text-white">1</span>
-                </div>
-                <div className="flex-1 bg-gray-50 p-4 rounded-lg border-l-4 border-[#15BACD] shadow-sm group-hover:shadow-md transition-all">
-                  <h3 className="font-semibold text-[#353939] group-hover:text-[#15BACD] transition-colors">Personal Details</h3>
-                  <p className="text-sm text-gray-600">Set up your profile and contact information</p>
-                </div>
-              </motion.div>
-
-              <motion.div 
-                className="flex items-center space-x-4 group"
-                whileHover={{ x: 10 }}
-                transition={{ type: "spring", stiffness: 300 }}
-              >
-                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#15BACD] to-[#094DA2] flex items-center justify-center flex-shrink-0 shadow-lg group-hover:shadow-[#15BACD]/20">
-                  <span className="text-xl font-bold text-white">2</span>
-                </div>
-                <div className="flex-1 bg-gray-50 p-4 rounded-lg border-l-4 border-[#15BACD] shadow-sm group-hover:shadow-md transition-all">
-                  <h3 className="font-semibold text-[#353939] group-hover:text-[#15BACD] transition-colors">Qualifications</h3>
-                  <p className="text-sm text-gray-600">Share your experience and preferences</p>
-                </div>
-              </motion.div>
-
-              <motion.div 
-                className="flex items-center space-x-4 group"
-                whileHover={{ x: 10 }}
-                transition={{ type: "spring", stiffness: 300 }}
-              >
-                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#15BACD] to-[#094DA2] flex items-center justify-center flex-shrink-0 shadow-lg group-hover:shadow-[#15BACD]/20">
-                  <span className="text-xl font-bold text-white">3</span>
-                </div>
-                <div className="flex-1 bg-gray-50 p-4 rounded-lg border-l-4 border-[#15BACD] shadow-sm group-hover:shadow-md transition-all">
-                  <h3 className="font-semibold text-[#353939] group-hover:text-[#15BACD] transition-colors">Skills & Certifications</h3>
-                  <p className="text-sm text-gray-600">Highlight your expertise and credentials</p>
-                </div>
-              </motion.div>
-            </div>
-          </div>
-
-          <Button
-            onClick={() => setShowWelcome(false)}
-            className="px-10 py-4 bg-[#353939] hover:bg-[#454545] text-white text-xl rounded-lg transition-colors shadow-lg"
-          >
-            Let's Get Started
-          </Button>
-        </motion.div>
-      </CardContent>
-    </Card>
-  </motion.div>
-)}
-
-   
-
-    {!showWelcome && (
-        <Card className="max-w-4xl mx-auto bg-white shadow-xl rounded-xl border border-gray-200">
-          <CardContent className="p-6">
-            <form onSubmit={handleNext} className="space-y-8">
-              <Tabs value={`step-${step}`} className="space-y-8">
-                {/* Step 1: Personal Details */}
-                <TabsContent value="step-1">
-                  {/* Account Details Section */}
-                  <div className="space-y-6 animate-fadeIn">
-                    <div className="flex items-center space-x-2 pb-2 border-b border-gray-200">
-                      <div className="h-8 w-1 bg-[#353939]"></div>
-                      <h3 className="text-lg font-semibold text-[#353939]">Account Details</h3>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl mx-auto">
-                      <div className="group">
-                        <Label htmlFor="email" className="text-sm font-medium text-[#353939]">
-                          Email <span className="text-red-500">*</span>
-                        </Label>
-                        <Input 
-                          id="email" 
-                          type="email" 
-                          value={email} 
-                          className="mt-1 bg-gray-50 border-gray-200 focus:border-[#353939] focus:ring-[#353939]/20" 
-                          disabled 
-                        />
-                      </div>
-                      <div className="group">
-                        <Label htmlFor="username" className="text-sm font-medium text-[#353939]">
-                          Username <span className="text-red-500">*</span>
-                        </Label>
-                        <Input 
-                          id="username" 
-                          value={username} 
-                          onChange={(e) => setUsername(e.target.value)} 
-                          className="mt-1 bg-gray-50 border-gray-200 focus:border-[#353939] focus:ring-[#353939]/20"
-                          required 
-                        />
-                      </div>
-                      <div className="group">
-                        <Label htmlFor="password" className="text-sm font-medium text-[#353939]">
-                          Password <span className="text-red-500">*</span>
-                        </Label>
-                        <div className="relative">
-                          <Input 
-                            id="password" 
-                            type={showPassword ? "text" : "password"}
-                            value={password} 
-                            onChange={(e) => {
-                              const value = e.target.value;
-                              if (!/^(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#$%^&*])(?=.{8,})/.test(value)) {
-                                setPasswordError('Password must be at least 8 characters with 1 uppercase letter, 1 number, and 1 special character');
-                              } else {
-                                setPasswordError('');
-                              }
-                              setPassword(value);
-                            }}
-                            required 
-                            className="mt-1 bg-gray-50 border-gray-200 focus:border-[#353939] focus:ring-[#353939]/20"
-                          />
-                          <button 
-                            type="button" 
-                            onClick={() => setShowPassword(!showPassword)} 
-                            className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                          >
-                            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                          </button>
-                        </div>
-                        {passwordError && (
-                          <p className="mt-1 text-sm text-red-500">{passwordError}</p>
-                        )}
-                      </div>
-                      <div className="group">
-                        <Label htmlFor="confirmPassword" className="text-sm font-medium text-[#353939]">
-                          Confirm Password <span className="text-red-500">*</span>
-                        </Label>
-                        <div className="relative">
-                          <Input 
-                            id="confirmPassword" 
-                            type={showConfirmPassword ? "text" : "password"}
-                            value={confirmPassword}
-                            onChange={(e) => {
-                              setConfirmPassword(e.target.value);
-                              if (e.target.value !== password) {
-                                setConfirmPasswordError('Passwords do not match');
-                              } else {
-                                setConfirmPasswordError('');
-                              }
-                            }}
-                            required
-                            className="mt-1 bg-gray-50 border-gray-200 focus:border-[#353939] focus:ring-[#353939]/20"
-                          />
-                          <button 
-                            type="button" 
-                            onClick={() => setShowConfirmPassword(!showConfirmPassword)} 
-                            className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                          >
-                            {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                          </button>
-                        </div>
-                        {confirmPasswordError && (
-                          <p className="mt-1 text-sm text-red-500">{confirmPasswordError}</p>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Personal Details Section */}
-                  <div className="space-y-6 animate-fadeIn mt-8">
-                    <div className="flex items-center space-x-2 pb-2 border-b border-gray-200">
-                      <div className="h-8 w-1 bg-[#353939]"></div>
-                      <h3 className="text-lg font-semibold text-[#353939]">Personal Details</h3>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl mx-auto">
-                      <div className="group">
-                        <Label htmlFor="firstName" className="text-sm font-medium text-[#353939]">
-                          First Name <span className="text-red-500">*</span>
-                        </Label>
-                        <Input 
-                          id="firstName" 
-                          value={firstName} 
-                          onChange={(e) => setFirstName(e.target.value)} 
-                          className="mt-1 bg-gray-50 border-gray-200 focus:border-[#353939] focus:ring-[#353939]/20"
-                          required 
-                        />
-                      </div>
-                      <div className="group">
-                        <Label htmlFor="lastName" className="text-sm font-medium text-[#353939]">
-                          Last Name <span className="text-red-500">*</span>
-                        </Label>
-                        <Input 
-                          id="lastName" 
-                          value={lastName} 
-                          onChange={(e) => setLastName(e.target.value)} 
-                          className="mt-1 bg-gray-50 border-gray-200 focus:border-[#353939] focus:ring-[#353939]/20"
-                          required 
-                        />
-                      </div>
-                      <div className="group">
-                        <Label htmlFor="phoneNo" className="text-sm font-medium text-[#353939]">
-                          Phone Number
-                        </Label>
-                        <Input 
-                          id="phoneNo" 
-                          type="tel" 
-                          value={phoneNo} 
-                          onChange={(e) => setPhoneNo(e.target.value)} 
-                          className="mt-1 bg-gray-50 border-gray-200 focus:border-[#353939] focus:ring-[#353939]/20"
-                        />
-                      </div>
-                      <div className="group">
-                        <Label htmlFor="linkedinUrl" className="text-sm font-medium text-[#353939]">
-                          LinkedIn URL <span className="text-red-500">*</span>
-                        </Label>
-                        <Input 
-                          id="linkedinUrl" 
-                          type="url" 
-                          value={linkedinUrl} 
-                          onChange={(e) => setLinkedinUrl(e.target.value)} 
-                          className="mt-1 bg-gray-50 border-gray-200 focus:border-[#353939] focus:ring-[#353939]/20"
-                          required 
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Address Section with Updated Styling */}
-                  <div className="space-y-6 animate-fadeIn mt-8">
-                    <div className="flex items-center space-x-2 pb-2 border-b border-gray-200">
-                      <div className="h-8 w-1 bg-[#353939]"></div>
-                      <h3 className="text-lg font-semibold text-[#353939]">Address Information</h3>
-                    </div>
-                    <div className="max-w-3xl mx-auto space-y-6">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="group">
-                          <Label htmlFor="addressLine1" className="text-sm font-medium text-[#353939]">
-                            Address Line 1
-                          </Label>
-                          <Input 
-                            id="addressLine1" 
-                            value={addressLine1} 
-                            onChange={(e) => setAddressLine1(e.target.value)} 
-                            className="mt-1 bg-gray-50 border-gray-200 focus:border-[#353939] focus:ring-[#353939]/20"
-                          />
-                        </div>
-                        <div className="group">
-                          <Label htmlFor="addressLine2" className="text-sm font-medium text-[#353939]">
-                            Address Line 2
-                          </Label>
-                          <Input 
-                            id="addressLine2" 
-                            value={addressLine2} 
-                            onChange={(e) => setAddressLine2(e.target.value)} 
-                            className="mt-1 bg-gray-50 border-gray-200 focus:border-[#353939] focus:ring-[#353939]/20"
-                          />
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
-                        <div className="group">
-                          <Label htmlFor="city" className="text-sm font-medium text-[#353939]">
-                            City
-                          </Label>
-                          <Input 
-                            id="city" 
-                            value={city} 
-                            onChange={(e) => setCity(e.target.value)} 
-                            className="mt-1 bg-gray-50 border-gray-200 focus:border-[#353939] focus:ring-[#353939]/20"
-                          />
-                        </div>
-                        <div className="group">
-                          <Label htmlFor="state" className="text-sm font-medium text-[#353939]">
-                            State
-                          </Label>
-                          <Input 
-                            id="state" 
-                            value={state} 
-                            onChange={(e) => setState(e.target.value)} 
-                            className="mt-1 bg-gray-50 border-gray-200 focus:border-[#353939] focus:ring-[#353939]/20"
-                          />
-                        </div>
-                        <div className="group">
-                          <Label htmlFor="country" className="text-sm font-medium text-[#353939]">
-                            Country
-                          </Label>
-                          <Input 
-                            id="country" 
-                            value={country} 
-                            onChange={(e) => setCountry(e.target.value)} 
-                            className="mt-1 bg-gray-50 border-gray-200 focus:border-[#353939] focus:ring-[#353939]/20"
-                          />
-                        </div>
-                        <div className="group">
-                          <Label htmlFor="postalCode" className="text-sm font-medium text-[#353939]">
-                            Postal Code
-                          </Label>
-                          <Input 
-                            id="postalCode" 
-                            value={postalCode} 
-                            onChange={(e) => setPostalCode(e.target.value)} 
-                            className="mt-1 bg-gray-50 border-gray-200 focus:border-[#353939] focus:ring-[#353939]/20"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </TabsContent>
-
-{/* Step 2: Qualifications */}
-<TabsContent value="step-2" className="animate-fadeIn">
-  <div className="max-w-2xl mx-auto space-y-8">
-    <div className="flex items-center space-x-2 pb-2 border-b border-gray-200">
-      <div className="h-8 w-1 bg-[#353939]"></div>
-      <h3 className="text-lg font-semibold text-[#353939]">Professional Information</h3>
+ {/* Profile Header */}
+<div className="bg-gradient-to-r from-[#15BACD] to-[#094DA2] p-4 sm:p-6 rounded-lg mb-4 shadow-lg">
+  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between space-y-3 sm:space-y-0">
+    {/* Name and Job */}
+    <div>
+      <h2 className="text-lg sm:text-3xl font-bold text-white leading-tight">
+        {`${formData?.personalDetails?.first_name || ''} ${formData?.personalDetails?.last_name || ''}`.trim() || 'N/A'}
+      </h2>
+      <p className="text-sm sm:text-xl text-gray-100 mt-1 sm:mt-2">
+        {formData.qualifications?.[0]?.recent_job || 'No Recent Job'}
+      </p>
     </div>
 
-    <div className="grid grid-cols-1 gap-6">
-      {/* Current Role Section */}
-      <div className="space-y-6">
-        <div className="group">
-          <Label htmlFor="recentJob" className="text-sm font-medium text-[#353939]">
-            Current/Recent Job Title <span className="text-red-500">*</span>
-          </Label>
-          <Input
-            id="recentJob"
-            value={recentJob}
-            onChange={(e) => setRecentJob(e.target.value)}
-            placeholder="e.g., Senior Software Engineer"
-            className="mt-1 bg-gray-50 border-gray-200 focus:border-[#353939] focus:ring-[#353939]/20"
-            required
-          />
-        </div>
-
-        <div className="group">
-          <Label htmlFor="preferredRoles" className="text-sm font-medium text-[#353939]">
-            Preferred Job Roles <span className="text-red-500">*</span>
-          </Label>
-          <Input
-            id="preferredRoles"
-            value={preferredRoles}
-            onChange={(e) => setPreferredRoles(e.target.value)}
-            placeholder="e.g., Full Stack Developer, DevOps Engineer"
-            className="mt-1 bg-gray-50 border-gray-200 focus:border-[#353939] focus:ring-[#353939]/20"
-            required
-          />
-        </div>
-      </div>
-
-      {/* Work Status Section */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-        <div className="group">
-          <Label className="text-sm font-medium text-[#353939]">
-            Availability <span className="text-red-500">*</span>
-          </Label>
-          <Select value={availability} onValueChange={setAvailability} required>
-            <SelectTrigger className="mt-1 bg-gray-50 border-gray-200 focus:border-[#353939] focus:ring-[#353939]/20">
-              <SelectValue placeholder="Select availability" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="immediate">Immediate</SelectItem>
-              <SelectItem value="2_weeks">2 Weeks Notice</SelectItem>
-              <SelectItem value="1_month">1 Month Notice</SelectItem>
-              <SelectItem value="2_months">2 Months Notice</SelectItem>
-              <SelectItem value="3_months">3+ Months Notice</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="group">
-          <Label className="text-sm font-medium text-[#353939]">
-            Work Authorization <span className="text-red-500">*</span>
-          </Label>
-          <Select value={workPermitStatus} onValueChange={setWorkPermitStatus} required>
-            <SelectTrigger className="mt-1 bg-gray-50 border-gray-200 focus:border-[#353939] focus:ring-[#353939]/20">
-              <SelectValue placeholder="Select status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="us_citizen">US Citizen</SelectItem>
-              <SelectItem value="green_card">Green Card</SelectItem>
-              <SelectItem value="h1b">H1B Visa</SelectItem>
-              <SelectItem value="l1">L1 Visa</SelectItem>
-              <SelectItem value="opt">OPT/CPT</SelectItem>
-              <SelectItem value="other">Other Work Authorization</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
-      {/* Preferences Section */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-        <div className="group">
-          <Label className="text-sm font-medium text-[#353939]">
-            Employment Type <span className="text-red-500">*</span>
-          </Label>
-          <Select value={preferredRoleType} onValueChange={setPreferredRoleType} required>
-            <SelectTrigger className="mt-1 bg-gray-50 border-gray-200 focus:border-[#353939] focus:ring-[#353939]/20">
-              <SelectValue placeholder="Select type" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="full_time">Full Time</SelectItem>
-              <SelectItem value="part_time">Part Time</SelectItem>
-              <SelectItem value="contract">Contract</SelectItem>
-              <SelectItem value="contract_to_hire">Contract to Hire</SelectItem>
-              <SelectItem value="intern">Internship</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="group">
-          <Label className="text-sm font-medium text-[#353939]">
-            Work Arrangement <span className="text-red-500">*</span>
-          </Label>
-          <Select value={preferredWorkArrangement} onValueChange={setPreferredWorkArrangement} required>
-            <SelectTrigger className="mt-1 bg-gray-50 border-gray-200 focus:border-[#353939] focus:ring-[#353939]/20">
-              <SelectValue placeholder="Select arrangement" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="onsite">On-site</SelectItem>
-              <SelectItem value="hybrid">Hybrid</SelectItem>
-              <SelectItem value="remote">Remote</SelectItem>
-              <SelectItem value="flexible">Flexible</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
-      {/* Compensation Section */}
-<div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-  <div className="group">
-    <Label className="text-sm font-medium text-[#353939]">
-      Compensation <span className="text-red-500">*</span>
-    </Label>
-    <Input
-      id="compensation"
-      type="number"
-      value={compensation}
-      onChange={(e) => setCompensation(e.target.value)}
-      placeholder="e.g., 50000"
-      className="mt-1 bg-gray-50 border-gray-200 focus:border-[#353939] focus:ring-[#353939]/20"
-      required
-    />
+    {/* Buttons */}
+    <div className="flex flex-col w-full sm:w-auto sm:flex-row sm:space-x-4 space-y-2 sm:space-y-0">
+      <Button
+        className="w-full sm:w-auto bg-white hover:bg-gray-100 text-[#094DA2] font-medium text-sm sm:text-base px-3 sm:px-4 py-2 rounded-md flex items-center justify-center"
+        onClick={handleDownloadResume}
+      >
+        <Eye className="h-4 sm:h-5 w-4 sm:w-5 mr-2" />
+        View Resume
+      </Button>
+      <Button
+        className="w-full sm:w-auto bg-white hover:bg-gray-100 text-[#094DA2] font-medium text-sm sm:text-base px-3 sm:px-4 py-2 rounded-md flex items-center justify-center"
+        onClick={handleDownloadDetails}
+      >
+        <Download className="h-4 sm:h-5 w-4 sm:w-5 mr-2" />
+        Download Details
+      </Button>
+    </div>
   </div>
 </div>
 
-
-      {/* Updated Resume Upload Section with Clear Button */}
-      <div className="space-y-2">
-        <Label htmlFor="resume" className="text-sm font-medium text-[#353939]">
-          Upload Resume <span className="text-red-500">*</span>
-        </Label>
-        <div className="flex items-center space-x-2">
-          <div className="flex-1">
-            <Input
-              id="resume"
-              type="file"
-              accept=".pdf,.doc,.docx"
-              onChange={handleResumeUpload}
-              required={!savedResume}
-              className="mt-1 cursor-pointer bg-gray-50 border-gray-200 focus:border-[#353939] focus:ring-[#353939]/20
-               file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 
-               file:text-sm file:font-semibold file:bg-[#353939]/10 file:text-[#353939]
-               hover:file:bg-[#353939]/20"
-            />
-          </div>
-          {resume && (
-            <Button
-              type="button"
-              onClick={handleClearResume}
-              variant="outline"
-              className="mt-1 border-gray-200 hover:bg-red-50 hover:text-red-600 hover:border-red-200"
-            >
-              Clear
-            </Button>
-          )}
-        </div>
-        <p className="text-xs text-gray-500">Accepted formats: PDF, DOC, DOCX (Max 5MB)</p>
-        {resume && (
-          <p className="text-sm text-[#353939]">
-            Selected file: {resume.name}
-          </p>
-        )}
-      </div>
+<div className="bg-white dark:bg-gray-800 rounded-lg mb-6">
+  <div className="border-b border-gray-200 dark:border-gray-700 p-6">
+    <div className="flex justify-between items-center">
+      <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Personal Details</h3>
+      <Button 
+        variant="outline" 
+        size="sm" 
+        onClick={() => handleEditToggle('personalDetails')} 
+        className="border-[#15BACD] text-[#15BACD] hover:bg-[#15BACD] hover:text-white transition-colors"
+      >
+        <Edit2 className="h-4 w-4 " />
+        Edit Details
+      </Button>
     </div>
   </div>
-</TabsContent>
 
-
-      
-<TabsContent value="step-3" className="animate-fadeIn">
-  <div className="max-w-2xl mx-auto space-y-8">
-    {/* Skills Section */}
-    <div className="space-y-6">
-      <div className="flex items-center space-x-2 pb-2 border-b border-gray-200">
-        <div className="h-8 w-1 bg-[#353939]"></div>
-        <h3 className="text-lg font-semibold text-[#353939]">Skills & Expertise</h3>
-      </div>
-
-      <div className="space-y-4">
-        <Label className="text-sm font-medium text-[#353939]">
-          Technical Skills <span className="text-red-500">*</span>
-        </Label>
-        
-        {/* Skills Input and Dropdown */}
-        <div className="relative">
-          <div className="flex space-x-2">
-            <div className="relative flex-1">
-              <Input
-                value={newSkill}
-                onChange={(e) => {
-                  setNewSkill(e.target.value);
-                  setIsSkillsDropdownOpen(true);
-                }}
-                onFocus={() => setIsSkillsDropdownOpen(true)}
-                placeholder="Search or add new skills"
-                className="bg-gray-50 border-gray-200 focus:border-[#353939] focus:ring-[#353939]/20"
-              />
-              {isSkillsDropdownOpen && (
-                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-48 overflow-auto">
-                  {skills
-                    .filter(skill => skill.toLowerCase().includes(newSkill.toLowerCase()))
-                    .map((skill, index) => (
-                      <button
-                        key={index}
-                        className="w-full px-4 py-2 text-left hover:bg-gray-50 focus:bg-gray-50 focus:outline-none"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          handleSkillSelect(skill);
-                          setNewSkill('');
-                          setIsSkillsDropdownOpen(false);
-                        }}
-                      >
-                        {skill}
-                      </button>
-                    ))}
-                    {newSkill && !skills.includes(newSkill) && (
-                      <button
-                        className="w-full px-4 py-2 text-left text-[#353939] hover:bg-gray-50 focus:bg-gray-50 focus:outline-none font-medium"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          handleAddSkill();
-                          setIsSkillsDropdownOpen(false);
-                        }}
-                      >
-                        Add "{newSkill}" as new skill
-                      </button>
-                    )}
-                </div>
-              )}
-            </div>
-            <Button
-              type="button"
-              onClick={() => {
-                handleAddSkill();
-                setIsSkillsDropdownOpen(false);
-              }}
-              className="bg-[#353939] hover:bg-[#454545] text-white"
-              disabled={!newSkill.trim()}
-            >
-              Add Skill
-            </Button>
-          </div>
+  <div className="p-6">
+  {isEditing.personalDetails ? (
+    <form onSubmit={(e) => handleSubmit(e, 'personalDetails')}>
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 w-full">
+          <div className="space-y-2">
+                <Label className="text-gray-700 dark:text-gray-300">Username</Label>
+                <Input name="personalDetails.username"
+            value={draftData.personalDetails?.username || ''}
+            disabled
+                  className="bg-gray-100 border-gray-300 dark:border-gray-600 cursor-not-allowed"
+          />
         </div>
-
-        {/* Selected Skills */}
-        <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 min-h-[100px]">
-          {selectedSkills.length === 0 ? (
-            <p className="text-gray-500 text-sm text-center">No skills selected. Add your technical expertise.</p>
-          ) : (
-            <div className="flex flex-wrap gap-2">
-              {selectedSkills.map((skill, index) => (
-                <Badge 
-                  key={index} 
-                  className="bg-[#353939]/10 text-[#353939] hover:bg-[#353939]/15 transition-colors"
-                >
-                  {skill}
-                  <button
-                    onClick={() => handleRemoveSkill(skill)}
-                    className="ml-2 hover:text-red-500 focus:outline-none"
-                  >
-                    ×
-                  </button>
-                </Badge>
-              ))}
-            </div>
-          )}
+        <div className="w-full space-y-2">
+          <Label className="text-gray-700 dark:text-gray-300">Phone Number</Label>
+          <Input
+            name="personalDetails.phone_no"
+            value={draftData.personalDetails?.phone_no || ''}
+            onChange={handleChange}
+            className="w-full border-gray-300 dark:border-gray-600 focus:border-[#15BACD] focus:ring-[#15BACD]"
+          />
+        </div>
+        <div className="w-full space-y-2">
+          <Label className="text-gray-700 dark:text-gray-300">Country</Label>
+          <Input
+            name="personalDetails.country"
+            value={draftData.personalDetails?.country || ''}
+            onChange={handleChange}
+            className="w-full border-gray-300 dark:border-gray-600 focus:border-[#15BACD] focus:ring-[#15BACD]"
+          />
+        </div>
+        <div className="w-full space-y-2">
+          <Label className="text-gray-700 dark:text-gray-300">City</Label>
+          <Input
+            name="personalDetails.city"
+            value={draftData.personalDetails?.city || ''}
+            onChange={handleChange}
+            className="w-full border-gray-300 dark:border-gray-600 focus:border-[#15BACD] focus:ring-[#15BACD]"
+          />
+        </div>
+        <div className="w-full space-y-2">
+          <Label className="text-gray-700 dark:text-gray-300">State</Label>
+          <Input
+            name="personalDetails.state"
+            value={draftData.personalDetails?.state || ''}
+            onChange={handleChange}
+            className="w-full border-gray-300 dark:border-gray-600 focus:border-[#15BACD] focus:ring-[#15BACD]"
+          />
+        </div>
+        <div className="w-full space-y-2">
+          <Label className="text-gray-700 dark:text-gray-300">Postal Code</Label>
+          <Input
+            name="personalDetails.postal_code"
+            value={draftData.personalDetails?.postal_code || ''}
+            onChange={handleChange}
+            className="w-full border-gray-300 dark:border-gray-600 focus:border-[#15BACD] focus:ring-[#15BACD]"
+          />
+        </div>
+        <div className="w-full space-y-2">
+          <Label className="text-gray-700 dark:text-gray-300">Address</Label>
+          <Input
+            name="personalDetails.address_line1"
+            value={draftData.personalDetails?.address_line1 || ''}
+            onChange={handleChange}
+            className="w-full border-gray-300 dark:border-gray-600 focus:border-[#15BACD] focus:ring-[#15BACD]"
+          />
+        </div>
+        <div className="w-full space-y-2">
+          <Label className="text-gray-700 dark:text-gray-300">LinkedIn URL</Label>
+          <Input
+            name="personalDetails.linkedin_url"
+            value={draftData.personalDetails?.linkedin_url || ''}
+            onChange={handleChange}
+            className="w-full border-gray-300 dark:border-gray-600 focus:border-[#15BACD] focus:ring-[#15BACD]"
+          />
         </div>
       </div>
-    </div>
-
-    {/* Certifications Section */}
-    <div className="space-y-6">
-      <div className="flex items-center space-x-2 pb-2 border-b border-gray-200">
-        <div className="h-8 w-1 bg-[#353939]"></div>
-        <h3 className="text-lg font-semibold text-[#353939]">Certifications</h3>
-      </div>
-
-      <div className="space-y-4">
-  <Label className="text-sm font-medium text-[#353939]">
-    Professional Certifications <span className="text-red-500">*</span>
-  </Label>
-
-
-        {/* Certifications Input and Dropdown */}
-        <div className="relative">
-          <div className="flex space-x-2">
-            <div className="relative flex-1">
-              <Input
-                value={newCertification}
-                onChange={(e) => {
-                  setNewCertification(e.target.value);
-                  setIsCertificationsDropdownOpen(true);
-                }}
-                onFocus={() => setIsCertificationsDropdownOpen(true)}
-                placeholder="Search or add new certifications"
-                className="bg-gray-50 border-gray-200 focus:border-[#353939] focus:ring-[#353939]/20"
-              />
-              {isCertificationsDropdownOpen && (
-                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-48 overflow-auto">
-                  {certifications
-                    .filter(cert => cert.toLowerCase().includes(newCertification.toLowerCase()))
-                    .map((cert, index) => (
-                      <button
-                        key={index}
-                        className="w-full px-4 py-2 text-left hover:bg-gray-50 focus:bg-gray-50 focus:outline-none"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          handleCertificationSelect(cert);
-                          setNewCertification('');
-                          setIsCertificationsDropdownOpen(false);
-                        }}
-                      >
-                        {cert}
-                      </button>
-                    ))}
-                    {newCertification && !certifications.includes(newCertification) && (
-                      <button
-                        className="w-full px-4 py-2 text-left text-[#353939] hover:bg-gray-50 focus:bg-gray-50 focus:outline-none font-medium"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          handleAddCertification();
-                          setIsCertificationsDropdownOpen(false);
-                        }}
-                      >
-                        Add "{newCertification}" as new certification
-                      </button>
-                    )}
-                </div>
-              )}
-            </div>
-            <Button
-              type="button"
-              onClick={() => {
-                handleAddCertification();
-                setIsCertificationsDropdownOpen(false);
-              }}
-              className="bg-[#353939] hover:bg-[#454545] text-white"
-              disabled={!newCertification.trim()}
-            >
-              Add Certification
-            </Button>
-          </div>
-        </div>
-
-        {/* Selected Certifications */}
-        <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 min-h-[100px]">
-    {selectedCertifications.length === 0 ? (
-      <p className="text-gray-500 text-sm text-center">Add at least one certification (required). Include any relevant professional certifications.</p>
-    ) : (
-            <div className="flex flex-wrap gap-2">
-              {selectedCertifications.map((cert, index) => (
-                <Badge 
-                  key={index} 
-                  className="bg-[#353939]/10 text-[#353939] hover:bg-[#353939]/15 transition-colors"
-                >
-                  {cert}
-                  <button
-                    onClick={() => handleRemoveCertification(cert)}
-                    className="ml-2 hover:text-red-500 focus:outline-none"
-                  >
-                    ×
-                  </button>
-                </Badge>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-
-    {/* Helper Text */}
-    <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
-      <p className="text-sm text-blue-800">
-        <span className="font-semibold">Pro tip:</span> Add both your current skills and certifications, 
-        as well as those you're currently pursuing. This helps match you with opportunities that align 
-        with your career growth.
-      </p>
-    </div>
-    </div>
-    </TabsContent>
-            </Tabs>
-
-            
-            {/* Updated Navigation Buttons */}
-            <div className="flex justify-between items-center mt-6">
-      <Button
-        type="button"
-        onClick={handleSaveProgress}
-        className="bg-gradient-to-r from-[#15abcd] to-[#094da2] hover:opacity-90 text-white rounded-lg flex items-center gap-2 md:px-6 md:py-2 p-2"
-      >
-        <Save className="w-4 h-4" />
-        <span className="hidden md:inline">Save</span>
-      </Button>
-      
-      <div className="flex space-x-4">
-        {step > 1 && (
-          <Button
-            type="button"
-            variant="outline"
-            onClick={handlePrevious}
-            className="px-6 sm:px-8 py-2 border-[#353939] hover:bg-[#353939]/5 text-[#353939]"
-          >
-            <span className="hidden md:inline">Previous</span>
-            <span className="md:hidden">Back</span>
-          </Button>
-        )}
+      <div className="flex justify-end space-x-3 mt-6">
+        <Button 
+          type="button" 
+          variant="outline" 
+          onClick={() => handleEditToggle('personalDetails')}
+          className="border-gray-300 text-gray-700 hover:bg-gray-100"
+        >
+          Cancel
+        </Button>
         <Button 
           type="submit"
-          className="px-6 sm:px-8 py-2 bg-[#353939] hover:bg-[#454545] text-white"
+          className="bg-gradient-to-r from-[#15BACD] to-[#094DA2] text-white"
         >
-          {step === 3 ? 'Submit' : 'Next'}
+          Save Changes
         </Button>
       </div>
-    </div>
-
     </form>
-        </CardContent>
-      </Card>
-    )
-  }
-
-      {/* Field Helper Messages */}
-      <div className="fixed bottom-4 right-4 space-y-4 max-w-[90vw] sm:max-w-sm">
-        {lastActive && (
-          <motion.div
-            initial={{ opacity: 0, x: 100 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: 100 }}
-            className="space-y-2"
+  ) : (
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="space-y-2">
+        <Label className="text-sm text-gray-500 dark:text-gray-400">Username</Label>
+        <p className="font-medium text-[#343636] dark:text-white">{candidate.username || 'N/A'}</p>
+      </div>
+      <div className="space-y-2">
+        <Label className="text-sm text-gray-500 dark:text-gray-400">Phone Number</Label>
+        <p className="text-[#343636] dark:text-white font-medium">{formData.personalDetails?.phone_no || 'N/A'}</p>
+      </div>
+      <div className="space-y-2">
+        <Label className="text-sm text-gray-500 dark:text-gray-400">Country</Label>
+        <p className="text-[#343636] dark:text-white font-medium">{formData.personalDetails?.country || 'N/A'}</p>
+      </div>
+      <div className="space-y-2">
+        <Label className="text-sm text-gray-500 dark:text-gray-400">City</Label>
+        <p className="text-[#343636] dark:text-white font-medium">{formData.personalDetails?.city || 'N/A'}</p>
+      </div>
+      <div className="space-y-2">
+        <Label className="text-sm text-gray-500 dark:text-gray-400">State</Label>
+        <p className="text-[#343636] dark:text-white font-medium">{formData.personalDetails?.state || 'N/A'}</p>
+      </div>
+      <div className="space-y-2">
+        <Label className="text-sm text-gray-500 dark:text-gray-400">Postal Code</Label>
+        <p className="text-[#343636] dark:text-white font-medium">{formData.personalDetails?.postal_code || 'N/A'}</p>
+      </div>
+      <div className="space-y-2 col-span-2 lg:col-span-1">
+        <Label className="text-sm text-gray-500 dark:text-gray-400">Address</Label>
+        <p className="text-[#343636] dark:text-white font-medium">{formData.personalDetails?.address_line1 || 'N/A'}</p>
+      </div>
+      <div className="space-y-2 col-span-2 lg:col-span-1">
+        <Label className="text-sm text-gray-500 dark:text-gray-400">LinkedIn URL</Label>
+        {formData.personalDetails?.linkedin_url ? (
+          <a
+            href={formData.personalDetails.linkedin_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="block truncate text-black dark:text-white font-medium underline"
+            title={formData.personalDetails.linkedin_url}
           >
-            {[1, 2, 3].map((messageIndex) => {
-              const message = getFieldMessage(lastActive, messageIndex);
-              if (!message) return null;
-              
-              return (
-                <Alert key={messageIndex} className="bg-white/95 backdrop-blur-sm border-l-4 border-l-[#15BACD] shadow-lg">
-                  <AlertCircle className="h-4 w-4 text-[#15BACD]" />
-                  <AlertDescription className="text-sm text-gray-600">
-                    {message}
-                  </AlertDescription>
-                </Alert>
-              );
-            })}
-          </motion.div>
+            {formData.personalDetails.linkedin_url}
+          </a>
+        ) : (
+          <p className="text-gray-900 dark:text-white font-medium">N/A</p>
         )}
-       {formProgress === 100 && showCompletionAlert && (
-          <motion.div
-            initial={{ opacity: 0, x: 100 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: 100 }}
-          >
-            <Alert className="bg-white/95 backdrop-blur-sm border-l-4 border-l-green-500 shadow-lg relative">
-              <CheckCircle2 className="h-4 w-4 text-green-500" />
-              <AlertDescription className="text-sm text-gray-600 pr-6">
-                Perfect! Your profile is complete. Ready to join TalentHub?
-              </AlertDescription>
-              <button 
-                onClick={() => setShowCompletionAlert(false)}
-                className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 transition-colors"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </Alert>
-           
-{formSaved && (
-  <Alert className="fixed bottom-4 right-4 bg-white/95 backdrop-blur-sm border-l-4 border-l-green-500 shadow-lg">
-    <CheckCircle2 className="h-4 w-4 text-green-500" />
-    <AlertDescription className="text-sm text-gray-600">
-      Progress saved successfully!
-    </AlertDescription>
-  </Alert>
-)}
- </motion.div>
-        )}
-
-        </div>
+      </div>
     </div>
-  );
-};
+  )}
+  </div>
+</div>
 
-export default OnboardingForm;
+<div className="bg-white dark:bg-gray-800 rounded-lg mb-6">
+  <div className="border-b border-gray-200 dark:border-gray-700 p-6">
+    <div className="flex justify-between items-center">
+      <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Qualifications</h3>
+      <Button 
+        variant="outline" 
+        size="sm" 
+        onClick={() => handleEditToggle('qualifications')}
+        className="border-[#15BACD] text-[#15BACD] hover:bg-[#15BACD] hover:text-white transition-colors"
+      >
+        <Edit2 className="h-4 w-4 mr-2" />
+        Edit Details
+      </Button>
+    </div>
+  </div>
+
+  <div className="p-6">
+  {isEditing.qualifications ? (
+  <form onSubmit={(e) => handleSubmit(e, 'qualifications')}>
+    {draftData.qualifications.map((qual, index) => (
+      <div key={index} className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div className="space-y-2 col-span-1">
+          <Label>Recent Job</Label>
+          <Input
+            name={`qualification_${index}_recent_job`}
+            value={qual.recent_job || ''}
+            onChange={handleChange}
+            className="border-gray-300 focus:border-[#15BACD] w-full"
+          />
+        </div>
+        <div className="space-y-2 col-span-1">
+          <Label>Preferred Role</Label>
+          <Input
+            name={`qualification_${index}_preferred_roles`}
+            value={qual.preferred_roles || ''}
+            onChange={handleChange}
+            className="border-gray-300 focus:border-[#15BACD] focus:ring-[#15BACD] w-full"
+          />
+        </div>
+        <div className="space-y-2 col-span-1">
+          <Label>Availability</Label>
+          <Input
+            name={`qualification_${index}_availability`}
+            value={qual.availability || ''}
+            onChange={handleChange}
+            className="border-gray-300 focus:border-[#15BACD] focus:ring-[#15BACD] w-full"
+          />
+        </div>
+        <div className="space-y-2 col-span-1">
+          <Label>Compensation</Label>
+          <Input
+            name={`qualification_${index}_compensation`}
+            value={qual.compensation || ''}
+            onChange={handleChange}
+            className="border-gray-300 focus:border-[#15BACD] focus:ring-[#15BACD] w-full"
+          />
+        </div>
+        <div className="space-y-2 col-span-1">
+          <Label>Preferred Role Type</Label>
+          <Input
+            name={`qualification_${index}_preferred_role_type`}
+            value={qual.preferred_role_type || ''}
+            onChange={handleChange}
+            className="border-gray-300 focus:border-[#15BACD] focus:ring-[#15BACD] w-full"
+          />
+        </div>
+        <div className="space-y-2 col-span-1">
+          <Label>Preferred Work Type</Label>
+          <Input
+            name={`qualification_${index}_preferred_work_arrangement`}
+            value={qual.preferred_work_arrangement || ''}
+            onChange={handleChange}
+            className="border-gray-300 focus:border-[#15BACD] focus:ring-[#15BACD] w-full"
+          />
+        </div>
+        <div className="space-y-2 col-span-1 md:col-span-2 md:col-start-3 md:col-end-4">
+          <Label>Resume</Label>
+          <Input
+            type="file"
+            name={`qualification_${index}_resume`}
+            onChange={(e) => handleResumeChange(e, index)}
+            className="block mt-2 w-full"
+          />
+        </div>
+      </div>
+    ))}
+    <div className="flex justify-end space-x-3 mt-6">
+      <Button 
+        type="button" 
+        variant="outline" 
+        onClick={() => handleEditToggle('qualifications')}
+        className="border-gray-300 text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+      >
+        Cancel
+      </Button>
+      <Button 
+        type="submit"
+        className="bg-gradient-to-r from-[#15BACD] to-[#094DA2] text-white hover:opacity-90"
+      >
+        Save Changes
+      </Button>
+    </div>
+  </form>
+) : (
+  <div className="space-y-6">
+    {formData.qualifications.map((qual, index) => (
+      <div key={index} className="grid grid-cols-2 md:grid-cols-4 gap-6">
+        <div className="space-y-2">
+          <Label className="text-sm text-gray-500 dark:text-gray-400">Recent Job</Label>
+          <p className="text-gray-900 dark:text-white font-medium">{qual.recent_job || 'N/A'}</p>
+        </div>
+        <div className="space-y-2">
+          <Label className="text-sm text-gray-500 dark:text-gray-400">Preferred Role</Label>
+          <p className="text-gray-900 dark:text-white font-medium">{qual.preferred_roles || 'N/A'}</p>
+        </div>
+        <div className="space-y-2">
+          <Label className="text-sm text-gray-500 dark:text-gray-400">Availability</Label>
+          <p className="text-gray-900 dark:text-white font-medium">{qual.availability || 'N/A'}</p>
+        </div>
+        <div className="space-y-2">
+          <Label className="text-sm text-gray-500 dark:text-gray-400">Compensation</Label>
+          <p className="text-gray-900 dark:text-white font-medium">{qual.compensation || 'N/A'}</p>
+        </div>
+        <div className="space-y-2">
+          <Label className="text-sm text-gray-500 dark:text-gray-400">Preferred Role Type</Label>
+          <p className="text-gray-900 dark:text-white font-medium">{qual.preferred_role_type || 'N/A'}</p>
+        </div>
+        <div className="space-y-2">
+          <Label className="text-sm text-gray-500 dark:text-gray-400">Preferred Work Type</Label>
+          <p className="text-gray-900 dark:text-white font-medium">{qual.preferred_work_arrangement || 'N/A'}</p>
+        </div>
+        <div className="space-y-2 col-span-2 md:col-start-3 md:col-end-4">
+          <Label className="text-sm text-gray-500 dark:text-gray-400">Resume</Label>
+          <p className="text-sm text-gray-600 dark:text-gray-400">{formData.personalDetails?.resume_path || 'No resume uploaded'}</p>
+        </div>
+      </div>
+    ))}
+  </div>
+)}
+</div>
+</div>
+
+
+{/* Skills and Certifications Grid */}
+<div className="grid md:grid-cols-2 gap-8">
+  {/* Skills Section */}
+  <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+    <div className="border-b border-gray-200 dark:border-gray-700 p-6">
+      <div className="flex justify-between items-center">
+        <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Skills</h3>
+        <Button 
+        variant="outline" 
+        size="sm" 
+        onClick={() => handleEditToggle('skills')}
+        className="border-[#15BACD] text-[#15BACD] hover:bg-[#15BACD] hover:text-white transition-colors"
+      >
+        <Edit2 className="h-4 w-4 mr-2" />
+        Edit Skills
+      </Button>
+      </div>
+    </div>
+    
+    <div className="p-6">
+    {isEditing.skills ? (
+  <SkillsEditForm
+    handleSubmit={handleSubmit}
+    newSkill={newSkill}
+    setNewSkill={setNewSkill}
+    formData={formData}
+    setFormData={setFormData}
+    handleRemoveSkill={handleRemoveSkill}
+    handleEditToggle={handleEditToggle}
+    details={details}
+    skills={skills}
+    isSkillsDropdownOpen={isSkillsDropdownOpen}
+    setIsSkillsDropdownOpen={setIsSkillsDropdownOpen}
+  />
+) : (
+        <div className="flex flex-wrap gap-2">
+          {formData.skills.map((skill, index) => (
+            <div
+              key={index} 
+              className="inline-flex items-center h-8 px-4 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-full text-sm border border-gray-300 dark:border-gray-600"
+            >
+              {skill}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  </div>
+
+  {/* Certifications Section */}
+  <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+    <div className="border-b border-gray-200 dark:border-gray-700 p-6">
+      <div className="flex justify-between items-center">
+        <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Certifications</h3>
+        <Button 
+  variant="outline" 
+  size="sm" 
+  onClick={() => handleEditToggle('certifications')}
+  className="border-[#15BACD] text-[#15BACD] hover:bg-[#15BACD] hover:text-white transition-colors"
+>
+  <Edit2 className="h-4 w-4 mr-2" />
+  <span className="hidden md:inline">Edit Certifications</span>
+  <span className="inline md:hidden">Edit Certs</span>
+</Button>
+      </div>
+    </div>
+    
+    <div className="p-6">
+    {isEditing.certifications ? (
+  <CertificationsEditForm
+    handleSubmit={handleSubmit}
+    newCertification={newCertification}
+    setNewCertification={setNewCertification}
+    formData={formData}
+    setFormData={setFormData}
+    handleRemoveCertification={handleRemoveCertification}
+    handleEditToggle={handleEditToggle}
+    details={details}
+    certifications={certifications}
+    isCertificationsDropdownOpen={isCertificationsDropdownOpen}
+    setIsCertificationsDropdownOpen={setIsCertificationsDropdownOpen}
+  />
+) : (
+        <div className="flex flex-wrap gap-2">
+          {formData.certifications.map((cert, index) => (
+            <div
+              key={index} 
+              className="inline-flex items-center h-8 px-4 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-full text-sm border border-gray-300 dark:border-gray-600"
+            >
+              {cert}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  </div>
+</div>
+</div>
+ </>
+          )
+          }
+ </div>
+)
+}  
+
+
+export default CandidateDetails;
