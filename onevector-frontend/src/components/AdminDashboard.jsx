@@ -29,7 +29,12 @@ import {
 import LoadingSpinner from './LoadingSpinner'; // Add this import
 import TutorialOverlay from './TutorialOverlay';
 import SendingMagicLink from './SendMagic'; // Add this import
-import { Filter, X } from "lucide-react";
+import { 
+  HelpCircle, 
+  Filter, 
+  PlusIcon,
+  MoreVertical 
+} from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -52,7 +57,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { HelpCircle } from "lucide-react";
 
 
 function AdminDashboard() {
@@ -80,65 +84,57 @@ const [isSendingMagicLink, setIsSendingMagicLink] = useState(false);
 const { isDarkMode, toggleTheme } = useTheme();
 const [skills, setSkills] = useState([]);
   const [certifications, setCertifications] = useState([]);
+  const [showActionsDropdown, setShowActionsDropdown] = useState(false);
 
 
-const handleDownloadDetails = async () => {
-  try {
-    const response = await axios.get('http://localhost:3000/api/candidates'); // Fetch candidates
-
-    if (response.data.length === 0) {
-      alert('No candidate details available to download.');
-      return;
-    }
-
-    // Create an array to hold all candidate details
-    const candidatesWithDetails = await Promise.all(response.data.map(async (candidate) => {
-      // Fetch personal details for each candidate
-      const personalDetailsResponse = await axios.get(`http://localhost:3000/api/personalDetails/${candidate.id}`);
-      const personalDetails = personalDetailsResponse.data;
-
-      // Combine candidate and personal details
-      return {
-        FirstName: personalDetails.personalDetails.first_name || 'N/A',
-        LastName: personalDetails.personalDetails.last_name || 'N/A',
+  const handleDownloadDetails = async () => {
+    try {
+      // Use filteredCandidates instead of fetching all candidates again
+      if (filteredCandidates.length === 0) {
+        alert('No candidate details available to download.');
+        return;
+      }
+  
+      // Create an array to hold all filtered candidate details
+      const candidatesWithDetails = filteredCandidates.map((candidate) => ({
+        FirstName: candidate.details?.personalDetails?.first_name || 'N/A',
+        LastName: candidate.details?.personalDetails?.last_name || 'N/A',
         Email: candidate.email || 'N/A',
         Role: candidate.role || 'N/A',
         Username: candidate.username || 'N/A',
-        Phone: personalDetails.personalDetails.phone_no || 'N/A',
-        Address: `${personalDetails.personalDetails.address_line1 || ''}, ${personalDetails.personalDetails.address_line2 || ''}`,
-        City: personalDetails.personalDetails.city || 'N/A',
-        State: personalDetails.personalDetails.state || 'N/A',
-        Country: personalDetails.personalDetails.country || 'N/A',
-        PostalCode: personalDetails.personalDetails.postal_code || 'N/A',
-        LinkedIn: personalDetails.personalDetails.linkedin_url || 'N/A',
-        ResumePath: personalDetails.personalDetails.resume_path || 'N/A',
-        RecentJob: personalDetails.qualifications[0]?.recent_job || 'N/A',
-        PreferredRoles: personalDetails.qualifications[0]?.preferred_roles || 'N/A',
-        Availability: personalDetails.qualifications[0]?.availability || 'N/A',
-        WorkPermitStatus: personalDetails.qualifications[0]?.work_permit_status || 'N/A',
-        PreferredRoleType: personalDetails.qualifications[0]?.preferred_role_type || 'N/A',
-        PreferredWorkArrangement: personalDetails.qualifications[0]?.preferred_work_arrangement || 'N/A',
-        Compensation: personalDetails.qualifications[0]?.compensation || 'N/A',
-        Skills: personalDetails.skills.join(', ') || 'N/A',
-        Certifications: personalDetails.certifications.join(', ') || 'N/A',
-      };
-    }));
-
-    // Generate an Excel worksheet
-    const worksheet = XLSX.utils.json_to_sheet(candidatesWithDetails);
-
-    // Create a new workbook and append the worksheet
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Candidates');
-
-    // Trigger download of the Excel file
-    XLSX.writeFile(workbook, 'Candidate_Details.xlsx');
-  } catch (error) {
-    console.error('Error downloading candidate details:', error);
-    alert(`Failed to download candidate details: ${error.message}`);
-  }
-};
-
+        Phone: candidate.details?.personalDetails?.phone_no || 'N/A',
+        Address: `${candidate.details?.personalDetails?.address_line1 || ''}, ${candidate.details?.personalDetails?.address_line2 || ''}`,
+        City: candidate.details?.personalDetails?.city || 'N/A',
+        State: candidate.details?.personalDetails?.state || 'N/A',
+        Country: candidate.details?.personalDetails?.country || 'N/A',
+        PostalCode: candidate.details?.personalDetails?.postal_code || 'N/A',
+        LinkedIn: candidate.details?.personalDetails?.linkedin_url || 'N/A',
+        ResumePath: candidate.details?.personalDetails?.resume_path || 'N/A',
+        RecentJob: candidate.details?.qualifications?.[0]?.recent_job || 'N/A',
+        PreferredRoles: candidate.details?.qualifications?.[0]?.preferred_roles || 'N/A',
+        Availability: candidate.details?.qualifications?.[0]?.availability || 'N/A',
+        WorkPermitStatus: candidate.details?.qualifications?.[0]?.work_permit_status || 'N/A',
+        PreferredRoleType: candidate.details?.qualifications?.[0]?.preferred_role_type || 'N/A',
+        PreferredWorkArrangement: candidate.details?.qualifications?.[0]?.preferred_work_arrangement || 'N/A',
+        Compensation: candidate.details?.qualifications?.[0]?.compensation || 'N/A',
+        Skills: candidate.details?.skills?.join(', ') || 'N/A',
+        Certifications: candidate.details?.certifications?.join(', ') || 'N/A',
+      }));
+  
+      // Generate an Excel worksheet
+      const worksheet = XLSX.utils.json_to_sheet(candidatesWithDetails);
+  
+      // Create a new workbook and append the worksheet
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Filtered Candidates');
+  
+      // Trigger download of the Excel file
+      XLSX.writeFile(workbook, 'Filtered_Candidate_Details.xlsx');
+    } catch (error) {
+      console.error('Error downloading candidate details:', error);
+      alert(`Failed to download candidate details: ${error.message}`);
+    }
+  };
 
   useEffect(() => {
     const fetchCandidates = async () => {
@@ -655,133 +651,125 @@ useEffect(() => {
       </Card>
     </div>
   )}
-{/* Header Section */}
+
 <header
-  className={cn(
-    "fixed top-0 left-0 right-0 z-10 shadow-md",
-    isDarkMode ? "bg-gray-800" : "bg-white"
-  )}
->
-  <div className="flex justify-between items-center p-2 sm:p-4 w-full">
-    {/* Logo and Title */}
-    <div className="flex items-center space-x-2">
-      <img
-        src={oneVectorImage}
-        alt="OneVector Logo"
-        className="w-5 h-6 sm:w-8 sm:h-8"
-      />
-      <h1
-        className={cn(
-          "text-lg sm:text-2xl font-semibold tracking-wide",
-          "text-transparent bg-clip-text bg-gradient-to-r from-[#15BACD] to-[#094DA2]"
-        )}
-      >
-        TalentHub
-      </h1>
-    </div>
-
-    {/* Action Buttons */}
-    <div className="flex items-center space-x-2">
-            {/* Help Icon with Dropdown */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className={cn(
-                    "rounded-full",
-                    isDarkMode ? "hover:bg-gray-700" : "hover:bg-gray-100"
-                  )}
-                >
-                  <HelpCircle className={cn(
-                    "w-5 h-5",
-                    isDarkMode ? "text-gray-300" : "text-gray-600"
-                  )} />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={startTutorial}>
-                  Start Tutorial
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-      <Toggle
-        onClick={toggleTheme}
-        className={cn(
-          "p-1 sm:p-2 rounded-full",
-          isDarkMode
-            ? "bg-gray-700 hover:bg-gray-600"
-            : "bg-gray-200 hover:bg-gray-300"
-        )}
-      >
-        {isDarkMode ? (
-          <SunIcon className="w-4 h-4 sm:w-5 sm:h-5 text-gray-100" />
-        ) : (
-          <MoonIcon className="w-4 h-4 sm:w-5 sm:h-5 text-gray-800" />
-        )}
-      </Toggle>
-
-      {/* Logout Button */}
-      <Button
-        variant="outline"
-        onClick={handleLogout}
-        className={cn(
-          "px-3 sm:px-4 py-1 sm:py-2 h-8 sm:h-10 rounded-full flex items-center justify-center space-x-2 text-sm sm:text-base font-semibold transition-all",
-          isDarkMode
-            ? "bg-gradient-to-r from-red-500 to-red-700 text-white hover:from-red-600 hover:to-red-800"
-            : "bg-gradient-to-r from-red-400 to-red-600 text-white hover:from-red-500 hover:to-red-700"
-        )}
-      >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 24 24"
-          strokeWidth="1.5"
-          stroke="currentColor"
-          className="w-4 h-4 sm:w-5 sm:h-5"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-7.5A2.25 2.25 0 003.75 5.25v13.5A2.25 2.25 0 006 21h7.5a2.25 2.25 0 002.25-2.25V15"
+      className={cn(
+        "fixed top-0 left-0 right-0 z-10 shadow-md",
+        isDarkMode ? "bg-gray-800" : "bg-white"
+      )}
+    >
+      <div className="flex justify-between items-center p-2 sm:p-4 w-full -ml-2">
+        {/* Logo and Title */}
+        <div className="flex items-center space-x-2">
+          <img
+            src={oneVectorImage}
+            alt="OneVector Logo"
+            className="w-5 h-6 sm:w-8 sm:h-10"
           />
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M18 12H9m0 0l3-3m-3 3l3 3"
-          />
-        </svg>
-        <span>Logout</span>
-      </Button>
-    </div>
-  </div>
-</header>
+          <h1
+            className={cn(
+              "text-lg sm:text-2xl font-semibold tracking-wide",
+              "text-transparent bg-clip-text bg-gradient-to-r from-[#15BACD] to-[#094DA2]"
+            )}
+          >
+            TalentHub
+          </h1>
+        </div>
+
+        {/* Action Section */}
+        <div className="flex items-center space-x-3">
+
+          {/* Help and Theme Toggle */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className={cn(
+                  "rounded-full",
+                  isDarkMode ? "hover:bg-gray-700" : "hover:bg-gray-100"
+                )}
+              >
+                <HelpCircle className={cn(
+                  "w-5 h-5",
+                  isDarkMode ? "text-gray-300" : "text-gray-600"
+                )} />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={startTutorial}>
+                Start Tutorial
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={toggleTheme}
+          >
+            {isDarkMode ? <SunIcon /> : <MoonIcon />}
+          </Button>
+
+          {/* Actions Dropdown */}
+          <DropdownMenu open={showActionsDropdown} onOpenChange={setShowActionsDropdown}>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="icon" data-tutorial="actions-dropdown"
+              >
+                <MoreVertical />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={handleDownloadDetails}>
+                <DownloadIcon className="mr-2 h-4 w-4" /> Download Details
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setShowForm(true)}>
+                <PlusIcon className="mr-2 h-4 w-4" /> Add User
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={fetchMagicLinks}>
+                <FaHistory className="mr-2 h-4 w-4" /> View History
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          {/* Logout Button */}
+          <Button
+            variant="destructive"
+            onClick={handleLogout}
+            className="rounded-full"
+          >
+            Logout
+          </Button>
+        </div>
+      </div>
+    </header>
 
 <main className="pt-16 px-4 sm:px-0 w-full bg-white text-black dark:bg-gray-900 dark:text-white">
-  <div className="flex flex-col md:flex-row justify-between items-center mb-4 mt-8 gap-4 w-full">
-    {/* Search Input */}
-    <Input
-      type="text"
-      placeholder="Search by name, email, skills, certifications, or qualifications"
-      value={searchQuery}
-      onChange={(e) => setSearchQuery(e.target.value)}
-      className="w-full md:w-1/2 border border-gray-300 bg-white text-black rounded-xl p-3 focus:ring-2 focus:ring-gray-500 transition-all duration-200 dark:bg-gray-800 dark:text-white dark:border-gray-700"
-      data-tutorial="search"
-    />
-
-<Sheet>
-          <SheetTrigger asChild>
-            <Button variant="outline" className="flex items-center gap-2">
-              <Filter className="h-4 w-4" />
-              Filters
-              {activeFilterCount > 0 && (
-                <Badge variant="secondary" className="ml-1">
-                  {activeFilterCount}
-                </Badge>
-              )}
-            </Button>
-          </SheetTrigger>
-          <SheetContent className="w-[400px] sm:w-[540px]">
+<div className="flex items-center w-full gap-2 mt-6">
+      <Input
+        type="text"
+        placeholder="Search..."
+        value={searchQuery}
+        onChange={(e) => setSearchQuery(e.target.value)}
+        className={cn(
+          "w-full md:w-1/2 border border-gray-300 bg-white text-black rounded-xl p-3 focus:ring-2 focus:ring-gray-500 transition-all duration-200",
+          isDarkMode ? "dark:bg-gray-800 dark:text-white dark:border-gray-700" : ""
+        )}
+        data-tutorial="search"
+      />
+      <Sheet>
+        <SheetTrigger asChild>
+          <Button variant="outline" className="flex items-center gap-2" data-tutorial="filter">
+            <Filter className="h-4 w-4" />
+            Filters
+            {activeFilterCount > 0 && (
+              <Badge variant="secondary" className="ml-1">
+                {activeFilterCount}
+              </Badge>
+            )}
+          </Button>
+        </SheetTrigger>
+        <SheetContent className="w-[400px] sm:w-[540px]">
       <SheetHeader>
         <div className="flex items-center justify-between">
           <SheetTitle>Filters</SheetTitle>
@@ -830,81 +818,6 @@ useEffect(() => {
             }
             return null;
           })}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Availability</label>
-                  <Select
-                    value={filters.availability}
-                    onValueChange={(value) => handleFilterChange('availability', value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select availability" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {filterOptions.availability.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Work Authorization</label>
-                  <Select
-                    value={filters.workAuthorization}
-                    onValueChange={(value) => handleFilterChange('workAuthorization', value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select work authorization" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {filterOptions.workAuthorization.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Employment Type</label>
-                  <Select
-                    value={filters.employmentType}
-                    onValueChange={(value) => handleFilterChange('employmentType', value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select employment type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {filterOptions.employmentType.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Work Arrangement</label>
-                  <Select
-                    value={filters.workArrangement}
-                    onValueChange={(value) => handleFilterChange('workArrangement', value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select work arrangement" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {filterOptions.workArrangement.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
                 <div className="space-y-2">
         <label className="text-sm font-medium">Skills</label>
         <Select
@@ -962,38 +875,6 @@ useEffect(() => {
             </ScrollArea>
           </SheetContent>
         </Sheet>
-
-    {/* Buttons and History Icon */}
-    <div className="flex flex-wrap items-center gap-4 sm:gap-6 w-full md:w-auto mt-4 md:mt-0">
-      <Button
-        onClick={handleDownloadDetails}
-        variant="solid"
-        className="px-3 sm:px-4 py-2 h-10 text-white font-medium rounded-xl flex items-center justify-center bg-[#094DA2] border border-[#094DA2] hover:bg-[#093A8E] transition-all duration-200 transform hover:scale-105 focus:outline-none dark:bg-[#094DA2] dark:border-[#094DA2] dark:hover:bg-[#093A8E]"
-        data-tutorial="download"
-      >
-        <DownloadIcon className="h-5 w-5 mr-2 text-white" />
-        DETAILS
-      </Button>
-
-      {/* Add User Button */}
-      <Button
-        onClick={() => setShowForm(true)}
-        variant="solid"
-        className="px-3 sm:px-4 py-2 h-10 text-white font-medium rounded-xl flex items-center justify-center bg-[#094DA2] border border-[#094DA2] hover:bg-[#093A8E] transition-all duration-200 transform hover:scale-105 focus:outline-none dark:bg-[#094DA2] dark:border-[#094DA2] dark:hover:bg-[#093A8E]"
-        data-tutorial="add-user"
-      >
-        <span className="text-lg font-bold">+</span>
-        ADD USER
-      </Button>
-
-      {/* History Icon */}
-      <FaHistory
-        size={18}
-        className="cursor-pointer mr-2 text-[#094DA2] transition-all duration-200 transform hover:scale-105 dark:text-[#094DA2] dark:hover:scale-110"
-        onClick={fetchMagicLinks}
-        data-tutorial="history"
-      />
-    </div>
   </div>
 
 
@@ -1119,90 +1000,88 @@ useEffect(() => {
             isDarkMode ? "border-gray-700 bg-gray-900 divide-gray-700" : "border-gray-200 bg-gray-50 divide-gray-200"
           )}>
             <TableHead className="w-[50px] py-4 px-4 font-semibold border-b">#</TableHead>
-            <TableHead className="py-4 px-4 font-semibold border-b">Name</TableHead>
-            <TableHead className="py-4 px-4 font-semibold border-b">Email</TableHead>
-            <TableHead className="py-4 px-4 font-semibold border-b">Role</TableHead>
-            <TableHead className="py-4 px-4 font-semibold border-b">Availability</TableHead>
-            <TableHead className="py-4 px-4 font-semibold border-b">Preferred Role</TableHead>
-            <TableHead className="py-4 px-4 font-semibold border-b">Skills</TableHead>
-            <TableHead className="py-4 px-4 font-semibold border-b">Certifications</TableHead>
-            <TableHead className="py-4 px-4 font-semibold text-left border-b">Actions</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody className="divide-y divide-gray-200 dark:divide-gray-700">
-          {filteredCandidates.map((candidate, index) => (
-            <TableRow key={candidate.id} className={cn(
+          <TableHead className="py-4 px-4 font-semibold border-b">Name</TableHead>
+          <TableHead className="py-4 px-4 font-semibold border-b">Email</TableHead>
+          <TableHead className="py-4 px-4 font-semibold border-b">Role</TableHead>
+          <TableHead className="py-4 px-4 font-semibold border-b">Availability</TableHead>
+          <TableHead className="py-4 px-4 font-semibold border-b">Preferred Role</TableHead>
+          <TableHead className="py-4 px-4 font-semibold border-b">Skills</TableHead>
+          <TableHead className="py-4 px-4 font-semibold border-b">Certifications</TableHead>
+          <TableHead className="py-4 px-4 font-semibold text-left border-b">Actions</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody className="divide-y divide-gray-200 dark:divide-gray-700">
+        {filteredCandidates.map((candidate, index) => (
+          <TableRow 
+            key={candidate.id} 
+            className={cn(
               "divide-x transition-colors hover:bg-gray-50/50",
               isDarkMode ? 
                 "divide-gray-700 hover:bg-gray-700/50" : 
                 "divide-gray-200 hover:bg-gray-100/50"
-            )}>
-              <TableCell className="py-4 px-4 font-medium">{index + 1}</TableCell>
-              <TableCell className="py-4 px-4">
-                <div className="flex items-center gap-2">
-                  {candidate.details?.personalDetails?.first_name} {candidate.details?.personalDetails?.last_name}
-                  {candidate.role === "power_user" && (
-                    <FaCrown className="text-yellow-500" />
-                  )}
-                </div>
-              </TableCell>
-              <TableCell className="py-4 px-4">{candidate.email}</TableCell>
-              <TableCell className="py-4 px-4">
-                <Badge variant={candidate.role === "power_user" ? "default" : "secondary"}>
-                  {candidate.role === "power_user" ? "Power User" : "User"}
-                </Badge>
-              </TableCell>
-              <TableCell className="py-4 px-4">
-                {candidate.details?.qualifications?.[0]?.availability || 'Not specified'}
-              </TableCell>
-              <TableCell className="py-4 px-4">
-                {candidate.details?.qualifications?.[0]?.preferred_roles || 'Not specified'}
-              </TableCell>
-              <TableCell className="py-4 px-4">
-                <div className="flex flex-wrap gap-1">
-                  {formatList(candidate.details?.skills)}
-                </div>
-              </TableCell>
-              <TableCell className="py-4 px-4">
-                <div className="flex flex-wrap gap-1">
-                  {formatList(candidate.details?.certifications)}
-                </div>
-              </TableCell>
-              <TableCell className="py-4 px-4">
-      <div className="flex justify-end gap-2" data-tutorial="actions">
-        <Button
-          variant="outline"
-          onClick={() => toggleRole(candidate)}
-          size="sm"
-          className="text-[#4F8FD7] border border-[#4F8FD7] hover:bg-[#15ABCD] hover:text-white focus:ring-2 focus:ring-[#4F8FD7] transition-all duration-200 transform hover:scale-105"
-        >
-          {candidate.role === "power_user" ? "Demote" : "Promote"}
-        </Button>
-        <Button
-          variant="destructive"
-          onClick={() => {
-            setSelectedCandidate(candidate);
-            setIsDeleteModalOpen(true);
-          }}
-          size="sm"
-          className="bg-red-500 text-white hover:bg-red-600 focus:ring-2 focus:ring-red-500 transition-all duration-200 transform hover:scale-105"
-        >
-          Delete
-        </Button>
-        <Button
-          variant="secondary"
-          onClick={() => handleShowDetails(candidate)}
-          size="sm"
-          className="bg-gray-800 text-white hover:bg-gray-700 focus:ring-2 focus:ring-gray-500 transition-all duration-200 transform hover:scale-105 dark:bg-[#1F2937] dark:hover:bg-[#374151] dark:text-white dark:border dark:border-white"
-        >
-          Details
-        </Button>
-      </div>
-    </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+            )}
+          >
+            <TableCell className="py-4 px-4 font-medium">{index + 1}</TableCell>
+            <TableCell className="py-4 px-4">
+              <div 
+                className="flex items-center gap-2 cursor-pointer" 
+                onClick={() => handleShowDetails(candidate)}
+              >
+                {candidate.details?.personalDetails?.first_name} {candidate.details?.personalDetails?.last_name}
+                {candidate.role === "power_user" && (
+                  <FaCrown className="text-yellow-500" />
+                )}
+              </div>
+            </TableCell>
+            <TableCell className="py-4 px-4">{candidate.email}</TableCell>
+            <TableCell className="py-4 px-4">
+              <Badge variant={candidate.role === "power_user" ? "default" : "secondary"}>
+                {candidate.role === "power_user" ? "Power User" : "User"}
+              </Badge>
+            </TableCell>
+            <TableCell className="py-4 px-4">
+              {candidate.details?.qualifications?.[0]?.availability || 'Not specified'}
+            </TableCell>
+            <TableCell className="py-4 px-4">
+              {candidate.details?.qualifications?.[0]?.preferred_roles || 'Not specified'}
+            </TableCell>
+            <TableCell className="py-4 px-4">
+              <div className="flex flex-wrap gap-1">
+                {formatList(candidate.details?.skills)}
+              </div>
+            </TableCell>
+            <TableCell className="py-4 px-4">
+              <div className="flex flex-wrap gap-1">
+                {formatList(candidate.details?.certifications)}
+              </div>
+            </TableCell>
+            <TableCell className="py-4 px-4">
+              <div className="flex justify-end gap-2" data-tutorial="actions">
+                <Button
+                  variant="outline"
+                  onClick={() => toggleRole(candidate)}
+                  size="sm"
+                  className="text-[#4F8FD7] border border-[#4F8FD7] hover:bg-[#15ABCD] hover:text-white focus:ring-2 focus:ring-[#4F8FD7] transition-all duration-200 transform hover:scale-105"
+                >
+                  {candidate.role === "power_user" ? "Demote" : "Promote"}
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={() => {
+                    setSelectedCandidate(candidate);
+                    setIsDeleteModalOpen(true);
+                  }}
+                  size="sm"
+                  className="bg-red-500 text-white hover:bg-red-600 focus:ring-2 focus:ring-red-500 transition-all duration-200 transform hover:scale-105"
+                >
+                  Delete
+                </Button>
+              </div>
+            </TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
     ) : (
       <p className="p-4 text-center text-gray-800 dark:text-white">No candidates found.</p>
     )}
