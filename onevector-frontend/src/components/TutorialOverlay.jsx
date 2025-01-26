@@ -10,30 +10,28 @@ const TutorialOverlay = ({ onClose }) => {
   const steps = [
     {
       target: '[data-tutorial="search"]',
-      content: 'Search for candidates by name, email, skills, or qualifications',
+      content: 'Use the search bar to find candidates by name, email, skills, or qualifications',
       position: 'bottom'
     },
     {
-      target: '[data-tutorial="download"]',
-      content: 'Download detailed information about all candidates',
+      target: '[data-tutorial="filter"]', // Added a new data-tutorial attribute for filters
+      content: 'Click on Filters to narrow down candidates by role, availability, skills, and certifications. You can apply multiple filters to refine your search.',
       position: 'bottom'
     },
     {
-      target: '[data-tutorial="add-user"]',
-      content: 'Add new users to the system',
-      position: 'left',
-      offset: -60  // Additional left offset for add-user step
+      target: 'table tr td:nth-child(2)', // Targets the Name column
+      content: 'Click on a candidate\'s name to view their detailed profile. Power users are marked with a crown icon.',
+      position: 'right'
     },
     {
-      target: '[data-tutorial="history"]',
-      content: 'View history of sent magic links',
-      position: 'left',
-      offset: -60  // Additional left offset for history step
+      target: '[data-tutorial="actions-dropdown"]', // Added for Actions dropdown
+      content: 'Actions dropdown provides quick access to: Download candidate details, Add new users, and View magic link history',
+      position: 'left'
     },
     {
       target: '[data-tutorial="actions"]',
-      content: 'Manage users: promote/demote, delete, or view details',
-      position: 'bottom'
+      content: 'In the Actions column, you can promote/demote users to Power User status or delete their account',
+      position: 'left'
     }
   ];
 
@@ -53,17 +51,17 @@ const TutorialOverlay = ({ onClose }) => {
     // Calculate initial position based on preferred position
     switch (step.position) {
       case 'bottom':
-        top = targetRect.bottom + padding;
-        // Center horizontally relative to target
-        left = targetRect.left + (targetRect.width / 2) - (dialogWidth / 2);
-        break;
-      case 'left':
-        // Vertically center relative to target
-        top = targetRect.top + (targetRect.height / 2) - (dialogHeight / 2);
-        // Apply additional offset for specific steps
-        left = targetRect.left - dialogWidth - padding + (step.offset || 0);
-        break;
-      default:
+  top = targetRect.bottom + padding + 10; // Added extra 10px
+  // Center horizontally relative to target
+  left = targetRect.left + (targetRect.width / 2) - (dialogWidth / 2);
+  break;
+case 'left':
+  // Vertically center relative to target
+  top = targetRect.top + (targetRect.height / 2) - (dialogHeight / 2);
+  // Move a bit further from the button
+  left = targetRect.left - dialogWidth - padding - 20; // Added extra 20px
+  break;
+  default:
         break;
     }
 
