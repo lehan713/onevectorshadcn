@@ -17,6 +17,7 @@ import LoadingSpinner from './LoadingSpinner';
 import { X } from 'lucide-react';
 import { Save } from 'lucide-react';
 
+
 const OnboardingForm = () => {
     const navigate = useNavigate();
     const [step, setStep] = useState(1);
@@ -48,8 +49,7 @@ const [isLoading, setIsLoading] = useState(false);
     const [workPermitStatus, setWorkPermitStatus] = useState('');
     const [preferredRoleType, setPreferredRoleType] = useState('');
     const [preferredWorkArrangement, setPreferredWorkArrangement] = useState('');
-   
-    const [compensation, setCompensation] = useState('');  // Update this to manage the compensation input
+    const [preferredCompensationRange, setPreferredCompensationRange] = useState('');
     const [resume, setResume] = useState(null);
     const [skills, setSkills] = useState([]);
     const [certifications, setCertifications] = useState([]);
@@ -65,6 +65,11 @@ const [isLoading, setIsLoading] = useState(false);
     const [showCompletionAlert, setShowCompletionAlert] = useState(true);
     const [formSaved, setFormSaved] = useState(false);
 const [savedResume, setSavedResume] = useState(null);
+const [phoneError, setPhoneError] = useState('');
+  const [linkedinError, setLinkedinError] = useState('');
+  const [qualificationsError, setQualificationsError] = useState('');
+  const DEFAULT_LINKEDIN_URL = 'https://linkedin.com/in/';
+
 
     useEffect(() => {
       const fetchSkillsAndCertifications = async () => {
@@ -86,14 +91,10 @@ const [savedResume, setSavedResume] = useState(null);
     }, []);
 
     useEffect(() => {
-      try {
-        const savedEmail = localStorage.getItem("magicLinkEmail") || sessionStorage.getItem("magicLinkEmail");
-        console.log("Retrieved email:", savedEmail); // Debugging log
-        if (savedEmail) {
-          setEmail(savedEmail);
-        }
-      } catch (error) {
-        console.error("Error accessing localStorage:", error);
+      // Assuming the email was saved in localStorage when sending the magic link
+      const savedEmail = localStorage.getItem('magicLinkEmail');
+      if (savedEmail) {
+        setEmail(savedEmail);
       }
     }, []);
 
@@ -103,13 +104,40 @@ const [savedResume, setSavedResume] = useState(null);
       const fileInput = document.getElementById('resume');
       if (fileInput) fileInput.value = '';
     };
-  
+
     const handleNext = async (event) => {
       event.preventDefault();
-  
-      if (step === 1 || step === 2) {
-        setStep(step + 1);
-      } else if (step === 3) {
+      
+      if (step === 1) {
+        const isPhoneValid = !phoneNo || (phoneNo.length >= 10 && phoneNo.length <= 15);
+        const isLinkedInValid = linkedinUrl.length > DEFAULT_LINKEDIN_URL.length + 2;
+        
+        if (!isPhoneValid) {
+          setPhoneError('Phone number must have between 10 and 15 digits');
+          return;
+        }
+        if (!isLinkedInValid) {
+          setLinkedinError('Please enter a valid LinkedIn username');
+          return;
+        }
+        setStep(2);
+      }
+      else if (step === 2) {
+        // Check if required fields are filled
+        if (!preferredRoles) {
+          setQualificationsError('Please enter your preferred job roles');
+          return;
+        }
+        if (!availability || !workPermitStatus || !preferredRoleType || !preferredWorkArrangement) {
+          setQualificationsError('Please fill in all required fields');
+          return;
+        }
+        if (!resume) {
+          setQualificationsError('Please upload a resume before proceeding.');
+          return;
+        }
+        setStep(3);
+      }else if (step === 3) {
         const formData = new FormData();
         
         // Append all form data
@@ -132,7 +160,7 @@ const [savedResume, setSavedResume] = useState(null);
         formData.append('work_permit_status', workPermitStatus);
         formData.append('preferred_role_type', preferredRoleType);
         formData.append('preferred_work_arrangement', preferredWorkArrangement);
-        formData.append('compensation',compensation);
+        formData.append('preferred_compensation_range', preferredCompensationRange);
         formData.append('resume', resume);
   
         // Append selected skills and certifications
@@ -194,7 +222,6 @@ const [savedResume, setSavedResume] = useState(null);
           setWorkPermitStatus(parsedData.workPermitStatus || '');
           setPreferredRoleType(parsedData.preferredRoleType || '');
           setPreferredWorkArrangement(parsedData.preferredWorkArrangement || '');
-          setCompensation(parsedData.compensation || '');
           
           // Skills and Certifications
           setSelectedSkills(parsedData.selectedSkills || []);
@@ -237,15 +264,14 @@ const handleSaveProgress = () => {
     username,
     email,
     recentJob,
-    preferredRoles,
     availability,
     workPermitStatus,
-    preferredRoleType,
-    preferredWorkArrangement,
-    compensation,
-
+    preferredRoles, // Add this field
+    preferredRoleType, // Add this field
+    preferredWorkArrangement, // Add this field
     selectedSkills,
     selectedCertifications,
+    preferredCompensationRange,
     savedResume: resume ? {
       name: resume.name,
       type: resume.type,
@@ -254,12 +280,18 @@ const handleSaveProgress = () => {
   };
 
   localStorage.setItem('onboardingFormData', JSON.stringify(formData));
-  setFormSaved(true);
   
-  // Show success message
-  setTimeout(() => setFormSaved(false), 3000);
-};
+  // Add a success message
+  const successAlert = document.createElement('div');
+  successAlert.className = 'fixed bottom-4 right-4 bg-green-500 text-white p-4 rounded-lg shadow-lg z-50';
+  successAlert.textContent = 'Progress saved successfully!';
+  document.body.appendChild(successAlert);
 
+  // Remove the alert after 3 seconds
+  setTimeout(() => {
+    document.body.removeChild(successAlert);
+  }, 3000);
+};
 
     const handlePrevious = () => {
       if (step > 1) {
@@ -330,6 +362,26 @@ const handleResumeUpload = (e) => {
   }
 };
 
+const handlePhoneChange = (e) => {
+  const value = e.target.value.replace(/\D/g, ''); // Remove non-digits
+  if (value.length > 15) return; // Prevent more than 15 digits
+  setPhoneNo(value);
+  setPhoneError(value.length < 10 ? 'Phone number must have at least 10 digits' : '');
+};
+
+// Modify LinkedIn URL handler
+const handleLinkedInChange = (e) => {
+  let value = e.target.value;
+  // If user tries to paste full URL, extract username
+  if (value.includes('linkedin.com/in/')) {
+    value = value.split('linkedin.com/in/')[1].split('/')[0];
+  }
+  // Remove default URL if present
+  value = value.replace(DEFAULT_LINKEDIN_URL, '');
+  setLinkedinUrl(DEFAULT_LINKEDIN_URL + value);
+  setLinkedinError(value.length < 3 ? 'LinkedIn username must be at least 3 characters' : '');
+};
+
   const steps = [
     { id: 1, title: 'Personal Details' },
     { id: 2, title: 'Qualifications' },
@@ -343,31 +395,45 @@ const handleResumeUpload = (e) => {
 
   React.useEffect(() => {
     const requiredFields = {
-      step1: ['username', 'password', 'firstName', 'lastName', 'linkedinUrl'],
-      step2: ['recentJob', 'availability', 'workPermitStatus', 'compensation','resume'],
-      step3: ['selectedSkills', 'selectedCertifications'] // Added selectedCertifications
+      step1: ['username', 'password', 'firstName', 'lastName', 'linkedinUrl', 'phoneNo'],
+      step2: ['recentJob', 'preferredRoles', 'availability', 'workPermitStatus', 'preferredRoleType', 'preferredWorkArrangement', 'resume'],
+      step3: ['selectedSkills', 'selectedCertifications']
     };
-
+  
     const filledFields = {
-      step1: [username, password, firstName, lastName, linkedinUrl].filter(Boolean).length,
-      step2: [recentJob, availability, workPermitStatus,compensation, resume].filter(Boolean).length,
+      step1: [
+        username, password, firstName, lastName, linkedinUrl, 
+        phoneNo && phoneNo.length >= 10
+      ].filter(Boolean).length,
+      step2: [
+        recentJob, 
+        preferredRoles, 
+        availability, 
+        workPermitStatus, 
+        preferredRoleType, 
+        preferredWorkArrangement, 
+        resume
+      ].filter(Boolean).length,
       step3: [
         selectedSkills.length > 0,
-        selectedCertifications.length > 0 // Added certification check
+        selectedCertifications.length > 0
       ].filter(Boolean).length
     };
 
-
-       const totalProgress = (
+    const totalProgress = (
       (filledFields.step1 / requiredFields.step1.length +
-        filledFields.step2 / requiredFields.step2.length +
-        filledFields.step3 / requiredFields.step3.length) /
+       filledFields.step2 / requiredFields.step2.length +
+       filledFields.step3 / requiredFields.step3.length) / 
       3
     ) * 100;
-
+  
     setFormProgress(Math.round(totalProgress));
-  }, [username, password, firstName, lastName, linkedinUrl, recentJob, availability, workPermitStatus,compensation, resume, selectedSkills, selectedCertifications]);
-
+  }, [
+    username, password, firstName, lastName, linkedinUrl, phoneNo,
+    recentJob, preferredRoles, availability, workPermitStatus, 
+    preferredRoleType, preferredWorkArrangement, resume,
+    selectedSkills, selectedCertifications
+  ]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-100 p-4">
@@ -632,30 +698,45 @@ const handleResumeUpload = (e) => {
                         />
                       </div>
                       <div className="group">
-                        <Label htmlFor="phoneNo" className="text-sm font-medium text-[#353939]">
-                          Phone Number
-                        </Label>
-                        <Input 
-                          id="phoneNo" 
-                          type="tel" 
-                          value={phoneNo} 
-                          onChange={(e) => setPhoneNo(e.target.value)} 
-                          className="mt-1 bg-gray-50 border-gray-200 focus:border-[#353939] focus:ring-[#353939]/20"
-                        />
-                      </div>
-                      <div className="group">
-                        <Label htmlFor="linkedinUrl" className="text-sm font-medium text-[#353939]">
-                          LinkedIn URL <span className="text-red-500">*</span>
-                        </Label>
-                        <Input 
-                          id="linkedinUrl" 
-                          type="url" 
-                          value={linkedinUrl} 
-                          onChange={(e) => setLinkedinUrl(e.target.value)} 
-                          className="mt-1 bg-gray-50 border-gray-200 focus:border-[#353939] focus:ring-[#353939]/20"
-                          required 
-                        />
-                      </div>
+      <Label htmlFor="phoneNo" className="text-sm font-medium text-[#353939]">
+        Phone Number
+      </Label>
+      <Input 
+        id="phoneNo" 
+        type="tel" 
+        value={phoneNo} 
+        onChange={handlePhoneChange}
+        placeholder="Enter numbers only" 
+        className={`mt-1 bg-gray-50 border-gray-200 focus:border-[#353939] focus:ring-[#353939]/20 ${
+          phoneError ? 'border-red-500' : ''
+        }`}
+      />
+      {phoneError && (
+        <p className="mt-1 text-sm text-red-500">{phoneError}</p>
+      )}
+    </div>
+    <div className="group">
+      <Label htmlFor="linkedinUrl" className="text-sm font-medium text-[#353939]">
+        LinkedIn Username <span className="text-red-500">*</span>
+      </Label>
+      <div className="relative">
+        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
+          {DEFAULT_LINKEDIN_URL}
+        </span>
+        <Input 
+          id="linkedinUrl" 
+          value={linkedinUrl.replace(DEFAULT_LINKEDIN_URL, '')}
+          onChange={handleLinkedInChange}
+          className={`mt-1 pl-[180px] bg-gray-50 border-gray-200 focus:border-[#353939] focus:ring-[#353939]/20 ${
+            linkedinError ? 'border-red-500' : ''
+          }`}
+          required 
+        />
+      </div>
+      {linkedinError && (
+        <p className="mt-1 text-sm text-red-500">{linkedinError}</p>
+      )}
+    </div>
                     </div>
                   </div>
 
@@ -740,7 +821,7 @@ const handleResumeUpload = (e) => {
                   </div>
                 </TabsContent>
 
-{/* Step 2: Qualifications */}
+             {/* Step 2: Qualifications */}
 <TabsContent value="step-2" className="animate-fadeIn">
   <div className="max-w-2xl mx-auto space-y-8">
     <div className="flex items-center space-x-2 pb-2 border-b border-gray-200">
@@ -755,13 +836,13 @@ const handleResumeUpload = (e) => {
           <Label htmlFor="recentJob" className="text-sm font-medium text-[#353939]">
             Current/Recent Job Title <span className="text-red-500">*</span>
           </Label>
-          <Input
-            id="recentJob"
-            value={recentJob}
-            onChange={(e) => setRecentJob(e.target.value)}
+          <Input 
+            id="recentJob" 
+            value={recentJob} 
+            onChange={(e) => setRecentJob(e.target.value)} 
             placeholder="e.g., Senior Software Engineer"
             className="mt-1 bg-gray-50 border-gray-200 focus:border-[#353939] focus:ring-[#353939]/20"
-            required
+            required 
           />
         </div>
 
@@ -769,10 +850,10 @@ const handleResumeUpload = (e) => {
           <Label htmlFor="preferredRoles" className="text-sm font-medium text-[#353939]">
             Preferred Job Roles <span className="text-red-500">*</span>
           </Label>
-          <Input
-            id="preferredRoles"
-            value={preferredRoles}
-            onChange={(e) => setPreferredRoles(e.target.value)}
+          <Input 
+            id="preferredRoles" 
+            value={preferredRoles} 
+            onChange={(e) => setPreferredRoles(e.target.value)} 
             placeholder="e.g., Full Stack Developer, DevOps Engineer"
             className="mt-1 bg-gray-50 border-gray-200 focus:border-[#353939] focus:ring-[#353939]/20"
             required
@@ -786,8 +867,14 @@ const handleResumeUpload = (e) => {
           <Label className="text-sm font-medium text-[#353939]">
             Availability <span className="text-red-500">*</span>
           </Label>
-          <Select value={availability} onValueChange={setAvailability} required>
-            <SelectTrigger className="mt-1 bg-gray-50 border-gray-200 focus:border-[#353939] focus:ring-[#353939]/20">
+          <Select 
+        value={availability} 
+        onValueChange={(value) => {
+          setAvailability(value);
+          setQualificationsError('');
+        }} 
+        required
+      >            <SelectTrigger className="mt-1 bg-gray-50 border-gray-200 focus:border-[#353939] focus:ring-[#353939]/20">
               <SelectValue placeholder="Select availability" />
             </SelectTrigger>
             <SelectContent>
@@ -804,8 +891,14 @@ const handleResumeUpload = (e) => {
           <Label className="text-sm font-medium text-[#353939]">
             Work Authorization <span className="text-red-500">*</span>
           </Label>
-          <Select value={workPermitStatus} onValueChange={setWorkPermitStatus} required>
-            <SelectTrigger className="mt-1 bg-gray-50 border-gray-200 focus:border-[#353939] focus:ring-[#353939]/20">
+          <Select 
+        value={workPermitStatus} 
+        onValueChange={(value) => {
+          setWorkPermitStatus(value);
+          setQualificationsError('');
+        }} 
+        required
+      >            <SelectTrigger className="mt-1 bg-gray-50 border-gray-200 focus:border-[#353939] focus:ring-[#353939]/20">
               <SelectValue placeholder="Select status" />
             </SelectTrigger>
             <SelectContent>
@@ -826,8 +919,14 @@ const handleResumeUpload = (e) => {
           <Label className="text-sm font-medium text-[#353939]">
             Employment Type <span className="text-red-500">*</span>
           </Label>
-          <Select value={preferredRoleType} onValueChange={setPreferredRoleType} required>
-            <SelectTrigger className="mt-1 bg-gray-50 border-gray-200 focus:border-[#353939] focus:ring-[#353939]/20">
+          <Select 
+        value={preferredRoleType} 
+        onValueChange={(value) => {
+          setPreferredRoleType(value);
+          setQualificationsError('');
+        }} 
+        required
+      >            <SelectTrigger className="mt-1 bg-gray-50 border-gray-200 focus:border-[#353939] focus:ring-[#353939]/20">
               <SelectValue placeholder="Select type" />
             </SelectTrigger>
             <SelectContent>
@@ -844,8 +943,14 @@ const handleResumeUpload = (e) => {
           <Label className="text-sm font-medium text-[#353939]">
             Work Arrangement <span className="text-red-500">*</span>
           </Label>
-          <Select value={preferredWorkArrangement} onValueChange={setPreferredWorkArrangement} required>
-            <SelectTrigger className="mt-1 bg-gray-50 border-gray-200 focus:border-[#353939] focus:ring-[#353939]/20">
+ <Select 
+        value={preferredWorkArrangement} 
+        onValueChange={(value) => {
+          setPreferredWorkArrangement(value);
+          setQualificationsError('');
+        }} 
+        required
+      >            <SelectTrigger className="mt-1 bg-gray-50 border-gray-200 focus:border-[#353939] focus:ring-[#353939]/20">
               <SelectValue placeholder="Select arrangement" />
             </SelectTrigger>
             <SelectContent>
@@ -857,67 +962,77 @@ const handleResumeUpload = (e) => {
           </Select>
         </div>
       </div>
-
-      {/* Compensation Section */}
 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
   <div className="group">
     <Label className="text-sm font-medium text-[#353939]">
-      Compensation <span className="text-red-500">*</span>
+      Preferred Compensation Range <span className="text-red-500">*</span>
     </Label>
-    <Input
-      id="compensation"
-      type="number"
-      value={compensation}
-      onChange={(e) => setCompensation(e.target.value)}
-      placeholder="e.g., 50000"
-      className="mt-1 bg-gray-50 border-gray-200 focus:border-[#353939] focus:ring-[#353939]/20"
+    <Select 
+      value={preferredCompensationRange} 
+      onValueChange={(value) => {
+        setPreferredCompensationRange(value);
+        setQualificationsError('');
+      }} 
       required
-    />
+    >
+      <SelectTrigger className="mt-1 bg-gray-50 border-gray-200 focus:border-[#353939] focus:ring-[#353939]/20">
+        <SelectValue placeholder="Select compensation range" />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="0-50k">$0 - $50,000</SelectItem>
+        <SelectItem value="50k-75k">$50,000 - $75,000</SelectItem>
+        <SelectItem value="75k-100k">$75,000 - $100,000</SelectItem>
+        <SelectItem value="100k-150k">$100,000 - $150,000</SelectItem>
+        <SelectItem value="150k-200k">$150,000 - $200,000</SelectItem>
+        <SelectItem value="200k+">$200,000+</SelectItem>
+      </SelectContent>
+    </Select>
+  </div>
+
+  {/* Resume Upload Section */}
+  <div className="space-y-2">
+    <Label htmlFor="resume" className="text-sm font-medium text-[#353939]">
+      Upload Resume <span className="text-red-500">*</span>
+    </Label>
+    <div className="flex items-center space-x-2">
+      <div className="flex-1">
+        <Input
+          id="resume"
+          type="file"
+          accept=".pdf,.doc,.docx"
+          onChange={(e) => {
+            handleResumeUpload(e);
+            setQualificationsError('');
+           }}
+          required={!savedResume}
+          className="mt-1 cursor-pointer bg-gray-50 border-gray-200 focus:border-[#353939] focus:ring-[#353939]/20
+          file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 
+          file:text-sm file:font-semibold file:bg-[#353939]/10 file:text-[#353939]
+          hover:file:bg-[#353939]/20"
+        />
+      </div>
+      {resume && (
+        <Button
+          type="button"
+          onClick={handleClearResume}
+          variant="outline"
+          className="mt-1 border-gray-200 hover:bg-red-50 hover:text-red-600 hover:border-red-200"
+        >
+          Clear
+        </Button>
+      )}
+    </div>
+    <p className="text-xs text-gray-500">Accepted formats: PDF, DOC, DOCX (Max 5MB)</p>
+    {resume && (
+      <p className="text-sm text-[#353939]">
+        Selected file: {resume.name}
+      </p>
+    )}
   </div>
 </div>
-
-
-      {/* Updated Resume Upload Section with Clear Button */}
-      <div className="space-y-2">
-        <Label htmlFor="resume" className="text-sm font-medium text-[#353939]">
-          Upload Resume <span className="text-red-500">*</span>
-        </Label>
-        <div className="flex items-center space-x-2">
-          <div className="flex-1">
-            <Input
-              id="resume"
-              type="file"
-              accept=".pdf,.doc,.docx"
-              onChange={handleResumeUpload}
-              required={!savedResume}
-              className="mt-1 cursor-pointer bg-gray-50 border-gray-200 focus:border-[#353939] focus:ring-[#353939]/20
-               file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 
-               file:text-sm file:font-semibold file:bg-[#353939]/10 file:text-[#353939]
-               hover:file:bg-[#353939]/20"
-            />
-          </div>
-          {resume && (
-            <Button
-              type="button"
-              onClick={handleClearResume}
-              variant="outline"
-              className="mt-1 border-gray-200 hover:bg-red-50 hover:text-red-600 hover:border-red-200"
-            >
-              Clear
-            </Button>
-          )}
-        </div>
-        <p className="text-xs text-gray-500">Accepted formats: PDF, DOC, DOCX (Max 5MB)</p>
-        {resume && (
-          <p className="text-sm text-[#353939]">
-            Selected file: {resume.name}
-          </p>
-        )}
-      </div>
-    </div>
-  </div>
+</div>
+</div>
 </TabsContent>
-
 
       
 <TabsContent value="step-3" className="animate-fadeIn">
@@ -1223,10 +1338,11 @@ const handleResumeUpload = (e) => {
     </AlertDescription>
   </Alert>
 )}
+
  </motion.div>
         )}
 
-        </div>
+      </div>
     </div>
   );
 };
