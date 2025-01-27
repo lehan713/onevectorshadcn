@@ -49,7 +49,7 @@ const [isLoading, setIsLoading] = useState(false);
     const [workPermitStatus, setWorkPermitStatus] = useState('');
     const [preferredRoleType, setPreferredRoleType] = useState('');
     const [preferredWorkArrangement, setPreferredWorkArrangement] = useState('');
-    const [preferredCompensationRange, setPreferredCompensationRange] = useState('');
+    const [compensation, setcompensation] = useState('');
     const [resume, setResume] = useState(null);
     const [skills, setSkills] = useState([]);
     const [certifications, setCertifications] = useState([]);
@@ -91,10 +91,16 @@ const [phoneError, setPhoneError] = useState('');
     }, []);
 
     useEffect(() => {
-      // Assuming the email was saved in localStorage when sending the magic link
       const savedEmail = localStorage.getItem('magicLinkEmail');
       if (savedEmail) {
         setEmail(savedEmail);
+      } else {
+        const queryParams = new URLSearchParams(window.location.search);
+        const emailFromParams = queryParams.get('email');
+        if (emailFromParams) {
+          setEmail(emailFromParams);
+          localStorage.setItem('magicLinkEmail', emailFromParams); // Save to local storage
+        }
       }
     }, []);
 
@@ -160,7 +166,7 @@ const [phoneError, setPhoneError] = useState('');
         formData.append('work_permit_status', workPermitStatus);
         formData.append('preferred_role_type', preferredRoleType);
         formData.append('preferred_work_arrangement', preferredWorkArrangement);
-        formData.append('preferred_compensation_range', preferredCompensationRange);
+        formData.append('compensation', compensation);
         formData.append('resume', resume);
   
         // Append selected skills and certifications
@@ -271,7 +277,7 @@ const handleSaveProgress = () => {
     preferredWorkArrangement, // Add this field
     selectedSkills,
     selectedCertifications,
-    preferredCompensationRange,
+    compensation,
     savedResume: resume ? {
       name: resume.name,
       type: resume.type,
@@ -968,9 +974,9 @@ const handleLinkedInChange = (e) => {
       Preferred Compensation Range <span className="text-red-500">*</span>
     </Label>
     <Select 
-      value={preferredCompensationRange} 
+      value={compensation} 
       onValueChange={(value) => {
-        setPreferredCompensationRange(value);
+        setcompensation(value);
         setQualificationsError('');
       }} 
       required
