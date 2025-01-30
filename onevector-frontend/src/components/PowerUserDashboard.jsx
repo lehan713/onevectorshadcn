@@ -58,6 +58,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { X } from 'lucide-react';
+import PoweruserHelp from './PoweruserHelp';  // Adjust the import path based on your file structure
 
 function PowerUserDashboard() {const [details, setDetails] = useState(null);
   const [email, setEmail] = useState('');
@@ -650,29 +651,33 @@ useEffect(() => {
         {/* Action Section */}
         <div className="flex items-center space-x-3">
 
-          {/* Help and Theme Toggle */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className={cn(
-                  "rounded-full",
-                  isDarkMode ? "hover:bg-gray-700" : "hover:bg-gray-100"
-                )}
-              >
-                <HelpCircle className={cn(
-                  "w-5 h-5",
-                  isDarkMode ? "text-gray-300" : "text-gray-600"
-                )} />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={startTutorial}>
-                Start Tutorial
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+        <div className="flex items-center space-x-2">
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon"
+          className={cn(
+            "rounded-full",
+            isDarkMode ? "hover:bg-gray-700" : "hover:bg-gray-100"
+          )}
+        >
+          <HelpCircle className={cn(
+            "w-5 h-5",
+            isDarkMode ? "text-gray-300" : "text-gray-600"
+          )} />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem onClick={startTutorial}>
+          Start Tutorial
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+
+    <Dialog>
+      <PoweruserHelp />
+    </Dialog>
 
           <Button
             variant="ghost"
@@ -709,6 +714,7 @@ useEffect(() => {
             Logout
           </Button>
         </div>
+      </div>
       </div>
     </header>
 
@@ -849,7 +855,7 @@ useEffect(() => {
         onClick={handleDownloadDetails}
         variant="solid"
         className="px-3 sm:px-4 py-2 h-10 text-white font-medium rounded-xl flex items-center justify-center bg-[#094DA2] border border-[#094DA2] hover:bg-[#093A8E] transition-all duration-200 transform hover:scale-105 focus:outline-none dark:bg-[#094DA2] dark:border-[#094DA2] dark:hover:bg-[#093A8E]"
-        data-tutorial="download"
+        data-tutorial="details"
       >
         <DownloadIcon className="h-5 w-5 mr-2 text-white" />
         DETAILS
