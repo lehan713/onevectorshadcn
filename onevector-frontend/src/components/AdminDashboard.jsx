@@ -57,6 +57,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { X } from 'lucide-react';
+import HelpGuide from './HelpGuide';  // Adjust the import path based on your file structure
 
 
 function AdminDashboard() {
@@ -679,29 +681,33 @@ useEffect(() => {
         {/* Action Section */}
         <div className="flex items-center space-x-3">
 
-          {/* Help and Theme Toggle */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className={cn(
-                  "rounded-full",
-                  isDarkMode ? "hover:bg-gray-700" : "hover:bg-gray-100"
-                )}
-              >
-                <HelpCircle className={cn(
-                  "w-5 h-5",
-                  isDarkMode ? "text-gray-300" : "text-gray-600"
-                )} />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={startTutorial}>
-                Start Tutorial
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+        <div className="flex items-center space-x-2">
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon"
+          className={cn(
+            "rounded-full",
+            isDarkMode ? "hover:bg-gray-700" : "hover:bg-gray-100"
+          )}
+        >
+          <HelpCircle className={cn(
+            "w-5 h-5",
+            isDarkMode ? "text-gray-300" : "text-gray-600"
+          )} />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem onClick={startTutorial}>
+          Start Tutorial
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+
+    <Dialog>
+      <HelpGuide />
+    </Dialog>
 
           <Button
             variant="ghost"
@@ -720,9 +726,6 @@ useEffect(() => {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={handleDownloadDetails}>
-                <DownloadIcon className="mr-2 h-4 w-4" /> Download Details
-              </DropdownMenuItem>
               <DropdownMenuItem onClick={() => setShowForm(true)}>
                 <PlusIcon className="mr-2 h-4 w-4" /> Add User
               </DropdownMenuItem>
@@ -742,34 +745,34 @@ useEffect(() => {
           </Button>
         </div>
       </div>
+      </div>
     </header>
-
-<main className="pt-16 px-4 sm:px-0 w-full bg-white text-black dark:bg-gray-900 dark:text-white">
-<div className="flex items-center w-full gap-2 mt-6">
-      <Input
-        type="text"
-        placeholder="Search..."
-        value={searchQuery}
-        onChange={(e) => setSearchQuery(e.target.value)}
-        className={cn(
-          "w-full md:w-1/2 border border-gray-300 bg-white text-black rounded-xl p-3 focus:ring-2 focus:ring-gray-500 transition-all duration-200",
-          isDarkMode ? "dark:bg-gray-800 dark:text-white dark:border-gray-700" : ""
-        )}
-        data-tutorial="search"
-      />
-      <Sheet>
-        <SheetTrigger asChild>
-          <Button variant="outline" className="flex items-center gap-2" data-tutorial="filter">
-            <Filter className="h-4 w-4" />
-            Filters
-            {activeFilterCount > 0 && (
-              <Badge variant="secondary" className="ml-1">
-                {activeFilterCount}
-              </Badge>
+    <main className="pt-16 px-4 sm:px-0 w-full bg-white text-black dark:bg-gray-900 dark:text-white">
+    <div className="flex items-center w-full gap-2 mt-6">
+          <Input
+            type="text"
+            placeholder="Search..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className={cn(
+              "w-full md:w-1/2 border border-gray-300 bg-white text-black rounded-xl p-3 focus:ring-2 focus:ring-gray-500 transition-all duration-200",
+              isDarkMode ? "dark:bg-gray-800 dark:text-white dark:border-gray-700" : ""
             )}
-          </Button>
-        </SheetTrigger>
-        <SheetContent className="w-[400px] sm:w-[540px]">
+            data-tutorial="search"
+          />
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button variant="outline" className="flex items-center gap-2" data-tutorial="filter">
+                <Filter className="h-4 w-4" />
+                Filters
+                {activeFilterCount > 0 && (
+                  <Badge variant="secondary" className="ml-1">
+                    {activeFilterCount}
+                  </Badge>
+                )}
+              </Button>
+            </SheetTrigger>
+            <SheetContent className="w-[400px] sm:w-[540px]">
       <SheetHeader>
         <div className="flex items-center justify-between">
           <SheetTitle>Filters</SheetTitle>
@@ -875,9 +878,19 @@ useEffect(() => {
             </ScrollArea>
           </SheetContent>
         </Sheet>
-  </div>
-
-
+        
+        <div className="flex flex-wrap items-center gap-4 sm:gap-6 w-full md:w-auto mt-4 md:mt-0">
+      <Button
+        onClick={handleDownloadDetails}
+        variant="solid"
+        className="px-3 sm:px-4 py-2 h-10 text-white font-medium rounded-xl flex items-center justify-center bg-[#094DA2] border border-[#094DA2] hover:bg-[#093A8E] transition-all duration-200 transform hover:scale-105 focus:outline-none dark:bg-[#094DA2] dark:border-[#094DA2] dark:hover:bg-[#093A8E]"
+        data-tutorial="details"
+      >
+        <DownloadIcon className="h-5 w-5 mr-2 text-white" />
+        DETAILS
+      </Button>
+        </div>
+        </div>
 
   {/* Magic Link History Popup */}
   {showHistoryPopup && (
@@ -886,8 +899,6 @@ useEffect(() => {
       onClose={() => setShowHistoryPopup(false)}
     />
   )}
-
-  
 
 {showForm && (
   <Dialog open={showForm} onOpenChange={(open) => setShowForm(open)}>
@@ -1007,7 +1018,7 @@ useEffect(() => {
           <TableHead className="py-4 px-4 font-semibold border-b">Preferred Role</TableHead>
           <TableHead className="py-4 px-4 font-semibold border-b">Skills</TableHead>
           <TableHead className="py-4 px-4 font-semibold border-b">Certifications</TableHead>
-          <TableHead className="py-4 px-4 font-semibold text-left border-b">Actions</TableHead>
+          <TableHead className="py-4 px-4 font-semibold text-center border-b">Actions</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody className="divide-y divide-gray-200 dark:divide-gray-700">
