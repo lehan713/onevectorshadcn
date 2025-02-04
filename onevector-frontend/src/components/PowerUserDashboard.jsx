@@ -59,6 +59,8 @@ import {
 } from "@/components/ui/select";
 import { X } from 'lucide-react';
 import PoweruserHelp from './PoweruserHelp';  // Adjust the import path based on your file structure
+import TablePagination from './TablePagination';
+
 
 function PowerUserDashboard() {const [details, setDetails] = useState(null);
   const [email, setEmail] = useState('');
@@ -86,6 +88,11 @@ const [skills, setSkills] = useState([]);
   const [certifications, setCertifications] = useState([]);
   const [showActionsDropdown, setShowActionsDropdown] = useState(false);
 const [candidatesWithDetails, setCandidatesWithDetails] = useState([]);
+ const [currentPage, setCurrentPage] = useState(0);
+  const [pageSize, setPageSize] = useState(10);
+  const startIndex = currentPage * pageSize;
+  const endIndex = startIndex + pageSize;
+
 
 const handleDownloadDetails = async () => {
   try {
@@ -497,6 +504,7 @@ useEffect(() => {
   };
 
   const filteredCandidates = applyFilters(filterCandidates(candidatesWithDetails, searchQuery));
+  const currentData = filteredCandidates.slice(startIndex, endIndex);
 
   useEffect(() => {
     const fetchSkillsAndCertifications = async () => {
@@ -747,7 +755,7 @@ useEffect(() => {
       <SheetHeader>
         <div className="flex items-center justify-between">
           <SheetTitle>Filters</SheetTitle>
-          <Button variant="ghost" size="sm" onClick={resetFilters}>
+          <Button variant="ghost" className="mr-4" size="sm" onClick={resetFilters}>
             Reset filters
           </Button>
         </div>
@@ -970,97 +978,111 @@ useEffect(() => {
             <LoadingSpinner />
           </div>
         ) : (
-          <div className="mt-8 w-full overflow-hidden rounded-lg shadow-md">
-    {filteredCandidates.length ? (
-      <Table className={cn(
-        "w-full border-collapse divide-y divide-gray-200 dark:divide-gray-700",
-        isDarkMode ? "bg-gray-800 text-gray-100" : "bg-white text-gray-900"
-      )}>
-        <TableHeader>
-          <TableRow className={cn(
-            "divide-x",
-            isDarkMode ? "border-gray-700 bg-gray-900 divide-gray-700" : "border-gray-200 bg-gray-50 divide-gray-200"
-          )}>
-            <TableHead className="w-[50px] py-4 px-4 font-semibold border-b">#</TableHead>
-          <TableHead className="py-4 px-4 font-semibold border-b">Name</TableHead>
-          <TableHead className="py-4 px-4 font-semibold border-b">Email</TableHead>
-          <TableHead className="py-4 px-4 font-semibold border-b">Role</TableHead>
-          <TableHead className="py-4 px-4 font-semibold border-b">Availability</TableHead>
-          <TableHead className="py-4 px-4 font-semibold border-b">Preferred Role</TableHead>
-          <TableHead className="py-4 px-4 font-semibold border-b">Skills</TableHead>
-          <TableHead className="py-4 px-4 font-semibold border-b">Certifications</TableHead>
-          <TableHead className="py-4 px-4 font-semibold text-left border-b">Actions</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody className="divide-y divide-gray-200 dark:divide-gray-700">
-        {filteredCandidates.map((candidate, index) => (
-          <TableRow 
-            key={candidate.id} 
-            className={cn(
-              "divide-x transition-colors hover:bg-gray-50/50",
-              isDarkMode ? 
-                "divide-gray-700 hover:bg-gray-700/50" : 
-                "divide-gray-200 hover:bg-gray-100/50"
+          <div className="w-full overflow-hidden rounded-lg shadow-md">
+            <TablePagination
+              currentPage={currentPage}
+              setCurrentPage={setCurrentPage}
+              pageSize={pageSize}
+              setPageSize={setPageSize}
+              totalItems={filteredCandidates.length}
+            />
+
+            {filteredCandidates.length ? (
+              <Table className={cn(
+                "w-full border-collapse divide-y divide-white-400 dark:divide-white-700",
+                isDarkMode ? "bg-gray-800 text-gray-100" : "bg-white text-gray-900"
+              )}>
+                <TableHeader>
+                  <TableRow className="divide-x">
+                    <TableHead className="w-[50px] py-4 px-4 font-semibold border-b bg-[#EAF3FF] text-black border-0 border-r-2 border-white text-center whitespace-nowrap">#</TableHead>
+                    <TableHead className="py-4 px-4 font-semibold border-b bg-[#EAF3FF] text-black border-0 border-r-2 border-white text-center whitespace-nowrap">Name</TableHead>
+                    <TableHead className="py-4 px-4 font-semibold border-b bg-[#EAF3FF] text-black border-0 border-r-2 border-white text-center whitespace-nowrap">Email</TableHead>
+                    <TableHead className="py-4 px-4 font-semibold border-b bg-[#EAF3FF] text-black border-0 border-r-2 border-white text-center whitespace-nowrap">Role</TableHead>
+                    <TableHead className="py-4 px-4 font-semibold border-b bg-[#EAF3FF] text-black border-0 border-r-2 border-white text-center whitespace-nowrap">Availability</TableHead>
+                    <TableHead className="py-4 px-4 font-semibold border-b bg-[#EAF3FF] text-black border-0 border-r-2 border-white text-center whitespace-nowrap">Preferred Role</TableHead>
+                    <TableHead className="py-4 px-4 font-semibold border-b bg-[#EAF3FF] text-black border-0 border-r-2 border-white text-center whitespace-nowrap">Skills</TableHead>
+                    <TableHead className="py-4 px-4 font-semibold border-b bg-[#EAF3FF] text-black border-0 border-r-2 border-white text-center whitespace-nowrap">Certifications</TableHead>
+                    <TableHead className="py-4 px-4 font-semibold text-center border-b bg-[#EAF3FF] text-black border-0 border-r-2 border-white text-center whitespace-nowrap">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody className="divide-y divide-gray-200 dark:divide-gray-700">
+                  {filteredCandidates.map((candidate, index) => (
+                    <TableRow
+                      key={candidate.id}
+                      className={cn(
+                        "divide-x transition-colors",
+                        isDarkMode ? "divide-gray-700 hover:bg-gray-700/50" : "divide-gray-200 hover:bg-gray-100/50"
+                      )}
+                    >
+                      <TableCell className="py-4 px-4 font-medium">{index + 1}</TableCell>
+                      <TableCell className="py-4 px-4">
+                        <div
+                          className="flex items-center gap-2"
+                          onClick={() => handleShowDetails(candidate)}
+                        >
+                          <span className="bg-gradient-to-r from-[#15ABCD] to-[#094DA2] text-transparent bg-clip-text font-semibold hover:font-bold cursor-pointer">
+                            {candidate.details?.personalDetails?.first_name} {candidate.details?.personalDetails?.last_name}
+                          </span>
+                          {candidate.role === "power_user" && <FaCrown className="text-yellow-500" />}
+                        </div>
+                      </TableCell>
+
+                      <TableCell className="py-4 px-4">{candidate.email}</TableCell>
+                      <TableCell className="py-4 px-4">
+                        <Badge variant={candidate.role === "power_user" ? "default" : "secondary"}>
+                          {candidate.role === "power_user" ? "Power User" : "User"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="py-4 px-4">
+                        {candidate.details?.qualifications?.[0]?.availability || 'Not specified'}
+                      </TableCell>
+                      <TableCell className="py-4 px-4">
+                        {candidate.details?.qualifications?.[0]?.preferred_roles || 'Not specified'}
+                      </TableCell>
+                      <TableCell className="py-4 px-4">
+                        <div className="flex flex-wrap gap-1">
+                          {formatList(candidate.details?.skills)}
+                        </div>
+                      </TableCell>
+                      <TableCell className="py-4 px-4">
+                        <div className="flex flex-wrap gap-1">
+                          {formatList(candidate.details?.certifications)}
+                        </div>
+                      </TableCell>
+                      <TableCell className="py-4 px-4">
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            variant="outline"
+                            onClick={() => toggleRole(candidate)}
+                            size="sm"
+                            className="text-[#4F8FD7] border border-[#4F8FD7] hover:bg-[#15ABCD] hover:text-white focus:ring-2 focus:ring-[#4F8FD7] transition-all duration-200 transform hover:scale-105"
+                          >
+                            {candidate.role === "power_user" ? "Demote" : "Promote"}
+                          </Button>
+                          <Button
+                            variant="destructive"
+                            onClick={() => {
+                              setSelectedCandidate(candidate);
+                              setIsDeleteModalOpen(true);
+                            }}
+                            size="sm"
+                            className="bg-red-500 text-white hover:bg-red-600 focus:ring-2 focus:ring-red-500 transition-all duration-200 transform hover:scale-105"
+                          >
+                            Delete
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+
+            ) : (
+              <p className="p-4 text-center text-gray-800 dark:text-white">No candidates found.</p>
             )}
-          >
-            <TableCell className="py-4 px-4 font-medium">{index + 1}</TableCell>
-            <TableCell className="py-4 px-4">
-              <div 
-                className="flex items-center gap-2 cursor-pointer" 
-                onClick={() => handleShowDetails(candidate)}
-              >
-                {candidate.details?.personalDetails?.first_name} {candidate.details?.personalDetails?.last_name}
-                {candidate.role === "power_user" && (
-                  <FaCrown className="text-yellow-500" />
-                )}
-              </div>
-            </TableCell>
-            <TableCell className="py-4 px-4">{candidate.email}</TableCell>
-            <TableCell className="py-4 px-4">
-              <Badge variant={candidate.role === "power_user" ? "default" : "secondary"}>
-                {candidate.role === "power_user" ? "Power User" : "User"}
-              </Badge>
-            </TableCell>
-            <TableCell className="py-4 px-4">
-              {candidate.details?.qualifications?.[0]?.availability || 'Not specified'}
-            </TableCell>
-            <TableCell className="py-4 px-4">
-              {candidate.details?.qualifications?.[0]?.preferred_roles || 'Not specified'}
-            </TableCell>
-            <TableCell className="py-4 px-4">
-              <div className="flex flex-wrap gap-1">
-                {formatList(candidate.details?.skills)}
-              </div>
-            </TableCell>
-            <TableCell className="py-4 px-4">
-              <div className="flex flex-wrap gap-1">
-                {formatList(candidate.details?.certifications)}
-              </div>
-            </TableCell>
-            <TableCell className="py-4 px-4">
-              <div className="flex justify-right gap-2" data-tutorial="actions">
-                <Button
-                  variant="destructive"
-                  onClick={() => {
-                    setSelectedCandidate(candidate);
-                    setIsDeleteModalOpen(true);
-                  }}
-                  size="sm"
-                  className="px-3 py-2 text-sm bg-red-500 text-white rounded-md hover:bg-red-600 focus:ring-2 focus:ring-red-500 transition-all duration-200 transform hover:scale-105"
-                  >
-                  Delete
-                </Button>
-              </div>
-            </TableCell>
-          </TableRow>
-        ))}
-      </TableBody>
-    </Table>
-    ) : (
-      <p className="p-4 text-center text-gray-800 dark:text-white">No candidates found.</p>
-    )}
-  </div>
-)}
+          </div>
+        )}
+
 
 </main>
   {/* History Modal */}
