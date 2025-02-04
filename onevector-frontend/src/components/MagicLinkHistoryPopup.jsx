@@ -209,7 +209,7 @@ const MagicLinkHistoryPopup = ({ magicLinks, onClose }) => {
                   size="sm"
                   onClick={() => goToPage(1)}
                   disabled={currentPage === 1}
-                  className="hidden md:block px-3 py-2 text-sm"
+                  className="hidden md:block px-3 text-sm"
                 >
                   First
                 </Button>
@@ -256,7 +256,7 @@ const MagicLinkHistoryPopup = ({ magicLinks, onClose }) => {
                   size="sm"
                   onClick={() => goToPage(totalPages)}
                   disabled={currentPage === totalPages}
-                  className="hidden md:block px-3 py-2 text-sm"
+                  className="hidden md:block px-3 text-sm"
                 >
                   Last
                 </Button>
