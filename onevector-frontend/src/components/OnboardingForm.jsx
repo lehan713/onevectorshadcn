@@ -91,16 +91,9 @@ const [phoneError, setPhoneError] = useState('');
     }, []);
 
     useEffect(() => {
-      const savedEmail = localStorage.getItem('magicLinkEmail');
-      if (savedEmail) {
-        setEmail(savedEmail);
-      } else {
-        const queryParams = new URLSearchParams(window.location.search);
-        const emailFromParams = queryParams.get('email');
-        if (emailFromParams) {
-          setEmail(emailFromParams);
-          localStorage.setItem('magicLinkEmail', emailFromParams); // Save to local storage
-        }
+      const userEmail = localStorage.getItem('userEmail');
+      if (userEmail) {
+        setEmail(userEmail);
       }
     }, []);
 
@@ -377,18 +370,20 @@ const handlePhoneChange = (e) => {
 
 // Modify LinkedIn URL handler
 const handleLinkedInChange = (e) => {
-  let value = e.target.value;
-  // If user tries to paste full URL, extract username
-  if (value.includes('linkedin.com/in/')) {
-    value = value.split('linkedin.com/in/')[1].split('/')[0];
+  let value = e.target.value.trim();
+
+  // Validate that it is still a proper LinkedIn URL or let the user freely edit
+  // Allow user to edit anything including the 'https://linkedin.com/in/' part
+  if (!value.startsWith(DEFAULT_LINKEDIN_URL)) {
+    // If the user removes the base, we'll allow it but still validate
+    value = value.replace(DEFAULT_LINKEDIN_URL, '');
   }
-  // Remove default URL if present
-  value = value.replace(DEFAULT_LINKEDIN_URL, '');
-  setLinkedinUrl(DEFAULT_LINKEDIN_URL + value);
-  setLinkedinError(value.length < 3 ? 'LinkedIn username must be at least 3 characters' : '');
+
+  setLinkedinUrl(value); // Set the new URL as the state
+  setLinkedinError(value.length < 3 ? 'LinkedIn URL must be at least 3 characters long' : '');
 };
 
-  const steps = [
+const steps = [
     { id: 1, title: 'Personal Details' },
     { id: 2, title: 'Qualifications' },
     { id: 3, title: 'Skills & Certifications' }
@@ -580,18 +575,18 @@ const handleLinkedInChange = (e) => {
                       <h3 className="text-lg font-semibold text-[#353939]">Account Details</h3>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl mx-auto">
-                      <div className="group">
-                        <Label htmlFor="email" className="text-sm font-medium text-[#353939]">
-                          Email <span className="text-red-500">*</span>
-                        </Label>
-                        <Input 
-                          id="email" 
-                          type="email" 
-                          value={email} 
-                          className="mt-1 bg-gray-50 border-gray-200 focus:border-[#353939] focus:ring-[#353939]/20" 
-                          disabled 
-                        />
-                      </div>
+                    <div className="group">
+                      <Label htmlFor="email" className="text-sm font-medium text-[#353939]">
+                        Email <span className="text-red-500">*</span>
+                      </Label>
+                      <Input 
+                        id="email" 
+                        type="email" 
+                        value={email} 
+                        className="mt-1 bg-gray-50 border-gray-200 focus:border-[#353939] focus:ring-[#353939]/20" 
+                        disabled 
+                      />
+                    </div>
                       <div className="group">
                         <Label htmlFor="username" className="text-sm font-medium text-[#353939]">
                           Username <span className="text-red-500">*</span>
@@ -705,7 +700,7 @@ const handleLinkedInChange = (e) => {
                       </div>
                       <div className="group">
       <Label htmlFor="phoneNo" className="text-sm font-medium text-[#353939]">
-        Phone Number
+        Phone Number <span className="text-red-500">*</span>
       </Label>
       <Input 
         id="phoneNo" 
@@ -716,34 +711,32 @@ const handleLinkedInChange = (e) => {
         className={`mt-1 bg-gray-50 border-gray-200 focus:border-[#353939] focus:ring-[#353939]/20 ${
           phoneError ? 'border-red-500' : ''
         }`}
+        required
       />
       {phoneError && (
         <p className="mt-1 text-sm text-red-500">{phoneError}</p>
       )}
     </div>
     <div className="group">
-      <Label htmlFor="linkedinUrl" className="text-sm font-medium text-[#353939]">
-        LinkedIn Username <span className="text-red-500">*</span>
-      </Label>
-      <div className="relative">
-        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
-          {DEFAULT_LINKEDIN_URL}
-        </span>
-        <Input 
-          id="linkedinUrl" 
-          value={linkedinUrl.replace(DEFAULT_LINKEDIN_URL, '')}
-          onChange={handleLinkedInChange}
-          className={`mt-1 pl-[180px] bg-gray-50 border-gray-200 focus:border-[#353939] focus:ring-[#353939]/20 ${
-            linkedinError ? 'border-red-500' : ''
-          }`}
-          required 
-        />
-      </div>
-      {linkedinError && (
-        <p className="mt-1 text-sm text-red-500">{linkedinError}</p>
-      )}
-    </div>
-                    </div>
+  <Label htmlFor="linkedinUrl" className="text-sm font-medium text-[#353939]">
+    LinkedIn URL <span className="text-red-500">*</span>
+  </Label>
+  <div className="relative">
+    <Input 
+      id="linkedinUrl" 
+      value={linkedinUrl}
+      onChange={handleLinkedInChange}
+      className={`mt-1 bg-gray-50 border-gray-200 focus:border-[#353939] focus:ring-[#353939]/20 ${
+        linkedinError ? 'border-red-500' : ''
+      }`}
+      required 
+    />
+  </div>
+  {linkedinError && (
+    <p className="mt-1 text-sm text-red-500">{linkedinError}</p>
+  )}
+</div>
+                </div>
                   </div>
 
                   {/* Address Section with Updated Styling */}
@@ -1011,8 +1004,8 @@ const handleLinkedInChange = (e) => {
             setQualificationsError('');
            }}
           required={!savedResume}
-          className="mt-1 cursor-pointer bg-gray-50 border-gray-200 focus:border-[#353939] focus:ring-[#353939]/20
-          file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 
+          className="cursor-pointer bg-gray-50 border-gray-200 focus:border-[#353939] focus:ring-[#353939]/20
+          file:mr-4 file:py-1 file:px-2 file:rounded-full file:border-0 
           file:text-sm file:font-semibold file:bg-[#353939]/10 file:text-[#353939]
           hover:file:bg-[#353939]/20"
         />
