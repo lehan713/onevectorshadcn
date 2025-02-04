@@ -1006,15 +1006,15 @@ useEffect(() => {
                   </TableRow>
                 </TableHeader>
                 <TableBody className="divide-y divide-gray-200 dark:divide-gray-700">
-                  {filteredCandidates.map((candidate, index) => (
-                    <TableRow
-                      key={candidate.id}
-                      className={cn(
-                        "divide-x transition-colors",
-                        isDarkMode ? "divide-gray-700 hover:bg-gray-700/50" : "divide-gray-200 hover:bg-gray-100/50"
-                      )}
-                    >
-                      <TableCell className="py-4 px-4 font-medium">{index + 1}</TableCell>
+                                  {currentData.map((candidate, index) => (  
+                                    <TableRow
+                                      key={candidate.id}
+                                      className={cn(
+                                        "divide-x transition-colors",
+                                        isDarkMode ? "divide-gray-700 hover:bg-gray-700/50" : "divide-gray-200 hover:bg-gray-100/50"
+                                      )}
+                                    >
+                      <TableCell className="py-4 px-4 font-medium">{startIndex + index + 1}</TableCell>
                       <TableCell className="py-4 px-4">
                         <div
                           className="flex items-center gap-2"
