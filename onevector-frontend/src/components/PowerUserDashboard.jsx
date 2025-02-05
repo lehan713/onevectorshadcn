@@ -1050,15 +1050,7 @@ useEffect(() => {
                         </div>
                       </TableCell>
                       <TableCell className="py-4 px-4">
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            variant="outline"
-                            onClick={() => toggleRole(candidate)}
-                            size="sm"
-                            className="text-[#4F8FD7] border border-[#4F8FD7] hover:bg-[#15ABCD] hover:text-white focus:ring-2 focus:ring-[#4F8FD7] transition-all duration-200 transform hover:scale-105"
-                          >
-                            {candidate.role === "power_user" ? "Demote" : "Promote"}
-                          </Button>
+                        <div className="flex justify-center gap-2">
                           <Button
                             variant="destructive"
                             onClick={() => {
