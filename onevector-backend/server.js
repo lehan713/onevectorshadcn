@@ -281,7 +281,6 @@ app.post('/api/reset-password', async (req, res) => {
 
 // Magic Link API
 app.post('/api/send-magic-link', async (req, res) => {
-  
   const { email } = req.body;
   if (!email) {
     return res.status(400).json({ error: 'Email is required' });
@@ -290,18 +289,34 @@ app.post('/api/send-magic-link', async (req, res) => {
   try {
     const token = uuidv4();
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours validity
-    await pool.execute('INSERT INTO magic_links (email, token, expires_at) VALUES (?, ?, ?)', [email, token, expiresAt]);
-
+    
+    // Initialize attempts and expired fields
+    await pool.execute(
+      'INSERT INTO magic_links (email, token, expires_at, attempts, expired, created_at) VALUES (?, ?, ?, 0, 0, NOW())',
+      [email, token, expiresAt]
+    );
     const magicLink = `${process.env.FRONTEND_URL}/onboard?token=${token}`;
 
     await transporter.sendMail({
       from: process.env.EMAIL_FROM,
       to: email,
-      subject: 'Complete your registration',
-      html: `<p>Click <a href="${magicLink}">this link</a> to complete your registration.</p>`,
+      subject: 'Complete Your Registration with TalentHub',
+      html: `
+        <p>Hello,</p>
+        <p>Thank you for signing up for TalentHub! To complete your registration and activate your account, please click the button below:</p>
+        <p><a href="${magicLink}" style="display: inline-block; padding: 10px 15px; font-size: 16px; color: #ffffff; background-color: #007BFF; text-decoration: none; border-radius: 5px;">Complete Your Registration</a></p>
+        <p>If the button above doesn't work, you can copy and paste the following URL into your browser:</p>
+        <p><a href="${magicLink}">${magicLink}</a></p>
+        <p>If you did not sign up for a TalentHub account, you can safely ignore this email.</p>
+        <p>We’re excited to have you on board!</p>
+        <p>Best regards,</p>
+        <p>The TalentHub Team</p>
+        <p style="font-size: 12px; color: #888888;">Note: This is an automated message. Please do not reply to this email.</p>
+        <p style="font-size: 12px; color: #888888;">© 2025 TalentHub. All rights reserved.</p>
+      `,
     });
-
-    res.json({ message: 'Magic link sent successfully' });
+    
+    res.json({ message: 'Magic link sent successfully' });    
   } catch (error) {
     console.error('Error name:', error.name);
     console.error('Error message:', error.message);
@@ -310,21 +325,59 @@ app.post('/api/send-magic-link', async (req, res) => {
   }
 });
 
-// API to verify magic link token
 app.get('/api/verify-token', async (req, res) => {
   const { token } = req.query;
+  console.log('Received token for verification:', token);
   
   try {
-    const [rows] = await pool.execute(
-      'SELECT * FROM magic_links WHERE token = ? AND expires_at > NOW() AND expired = 0',
+    // First check if token exists
+    const [allTokens] = await pool.execute(
+      'SELECT * FROM magic_links WHERE token = ?',
       [token]
     );
+    console.log('Found token record:', allTokens[0]);
 
-    if (rows.length === 0) {
+    if (allTokens.length === 0) {
+      console.log('Token not found in database');
+      return res.status(400).json({ error: 'Token not found' });
+    }
+
+    // Modified query to handle NULL values
+    const [validTokens] = await pool.execute(
+      `SELECT * FROM magic_links 
+       WHERE token = ? 
+       AND expires_at > NOW() 
+       AND (expired IS NULL OR expired = 0) 
+       AND (attempts IS NULL OR attempts < 3)`,
+      [token]
+    );
+    console.log('Current time:', new Date());
+    console.log('Valid token check result:', validTokens[0]);
+
+    if (validTokens.length === 0) {
+      const tokenRecord = allTokens[0];
+      console.log('Token invalid because:', {
+        isExpired: tokenRecord.expires_at < new Date(),
+        expiredFlag: tokenRecord.expired,
+        attempts: tokenRecord.attempts,
+        expiryTime: tokenRecord.expires_at
+      });
       return res.status(400).json({ error: 'Invalid or expired token' });
     }
 
-    res.json({ message: 'Token is valid' });
+    // Initialize attempts if NULL
+    await pool.execute(
+      `UPDATE magic_links 
+       SET attempts = COALESCE(attempts, 0) + 1,
+           expired = COALESCE(expired, 0)
+       WHERE token = ?`,
+      [token]
+    );
+
+    res.json({ 
+      message: 'Token is valid',
+      email: validTokens[0].email 
+    });
   } catch (error) {
     console.error('Token verification error:', error);
     res.status(500).json({ error: 'Server error' });
