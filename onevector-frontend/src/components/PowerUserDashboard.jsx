@@ -27,7 +27,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import LoadingSpinner from './LoadingSpinner'; // Add this import
-import TutorialOverlay from './TutorialOverlay';
+import PowerTutorial from './PowerTutorial';
 import SendingMagicLink from './SendMagic'; // Add this import
 import { 
   HelpCircle, 
@@ -152,7 +152,6 @@ const sanitizeSelectValue = (value) => {
 };
 
 const [filters, setFilters] = useState({
-  role: '',
   availability: '',
   workAuthorization: '',
   employmentType: '',
@@ -219,10 +218,6 @@ const filterOptions = {
     { value: "flexible", label: "Flexible" },
     { value: "unspecified", label: "Not Specified" }
   ],
-  role: [
-    { value: "user", label: "User" },
-    { value: "power_user", label: "Power User" }
-  ]
 };
 
 const handleFilterChange = (type, value) => {
@@ -257,7 +252,6 @@ const handleFilterChange = (type, value) => {
 
 const resetFilters = () => {
   setFilters({
-    role: '',
     availability: '',
     workAuthorization: '',
     employmentType: '',
@@ -281,9 +275,6 @@ const applyFilters = (candidates) => {
     const candidateSkills = candidate.details?.skills || [];
     const candidateCerts = candidate.details?.certifications || [];
 
-    // Check each filter condition
-    const matchesRole = !filters.role || candidate.role === filters.role;
-
     const matchesAvailability = !filters.availability || 
       sanitizeSelectValue(qualifications.availability) === filters.availability;
 
@@ -305,8 +296,7 @@ const applyFilters = (candidates) => {
       filters.certifications.some(cert => candidateCerts.includes(cert));
 
     // Return true only if ALL conditions are met
-    return matchesRole && 
-           matchesAvailability && 
+    return matchesAvailability && 
            matchesWorkAuth && 
            matchesEmploymentType && 
            matchesWorkArrangement && 
@@ -1165,7 +1155,7 @@ useEffect(() => {
       )}
 
       {showTutorial && (
-  <TutorialOverlay onClose={() => setShowTutorial(false)} />
+  <PowerTutorial onClose={() => setShowTutorial(false)} />
 )}
     </div>
   );
