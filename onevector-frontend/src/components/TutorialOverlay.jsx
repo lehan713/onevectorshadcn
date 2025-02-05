@@ -19,13 +19,18 @@ const TutorialOverlay = ({ onClose }) => {
       position: 'bottom'
     },
     {
+      target: '[data-tutorial="details"]', // Added a new data-tutorial attribute for filters
+      content: 'Downloads an excel file which includes the details of users and powerusers.',
+      position: 'bottom'
+    },
+    {
       target: 'table tr td:nth-child(2)', // Targets the Name column
       content: 'Click on a candidate\'s name to view their detailed profile. Power users are marked with a crown icon.',
       position: 'right'
     },
     {
       target: '[data-tutorial="actions-dropdown"]', // Added for Actions dropdown
-      content: 'Actions dropdown provides quick access to: Download candidate details, Add new users, and View magic link history',
+      content: 'Actions dropdown provides quick access to: Add new users, and View magic link history',
       position: 'left'
     },
     {
