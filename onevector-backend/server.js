@@ -752,47 +752,52 @@ app.put('/api/candidates/:id/personal', upload, async (req, res) => {
   }
 });
 
-
-// Update qualifications
+// Route to update qualifications
 app.put('/api/candidates/:id/qualifications', async (req, res) => {
-  const { id } = req.params;
-  const {
-      recent_job,
-      preferred_roles,
-      availability,
-      work_permit_status,
-      preferred_role_type,
-      preferred_work_arrangement,
-      compensation, // Ensure this is the correct name
-  } = req.body;
+  const { qualifications } = req.body;
 
-  // Prepare values, replacing undefined with null
-  const values = [
-      recent_job || null,
-      preferred_roles || null,
-      availability || null,
-      work_permit_status || null,
-      preferred_role_type || null,
-      preferred_work_arrangement || null,
-      compensation|| null, // Ensure this matches the SQL column name
-      id // Ensure this ID corresponds to the qualifications entry
-  ];
+  // Log received data for debugging
+  console.log('Received qualifications:', qualifications);
 
+  // Validate qualifications (ensure it's an array)
+  if (!Array.isArray(qualifications)) {
+    return res.status(400).json({ message: 'Qualifications must be an array.' });
+  }
+
+  // Validate each qualification entry (check if necessary fields exist)
+  qualifications.forEach((qual) => {
+    const { recent_job, preferred_roles, availability, compensation, preferred_role_type, preferred_work_arrangement, work_permit_status } = qual;
+
+    if (!recent_job || !preferred_roles || !availability || !compensation || !preferred_role_type || !preferred_work_arrangement || !work_permit_status) {
+      return res.status(400).json({ message: 'Missing required fields in qualifications.' });
+    }
+  });
+
+  // Proceed with updating the qualifications in the database
   try {
-      const [result] = await pool.execute(
-          'UPDATE qualifications SET recent_job = ?, preferred_roles = ?, availability = ?, work_permit_status = ?, preferred_role_type = ?, preferred_work_arrangement = ?, compensation = ? WHERE id = ?',
-          values
-      );
+    const id = req.params.id;
 
-      // Check if any rows were affected
-      if (result.affectedRows === 0) {
-          return res.status(404).json({ message: 'Qualifications not found or no changes made.' });
-      }
+    // Loop through the qualifications and update in the database
+    for (const qual of qualifications) {
+      const { recent_job, preferred_roles, availability, compensation, preferred_role_type, preferred_work_arrangement, work_permit_status } = qual;
 
-      res.status(200).json({ message: 'Qualifications updated successfully!' });
+      // Construct SQL query to update qualifications
+      const query = `
+        UPDATE qualifications
+        SET recent_job = ?, preferred_roles = ?, availability = ?, compensation = ?, preferred_role_type = ?, preferred_work_arrangement = ?, work_permit_status = ?
+        WHERE id = ?;
+      `;
+
+      // Execute the query
+      await pool.execute(query, [
+        recent_job, preferred_roles, availability, compensation, preferred_role_type, preferred_work_arrangement, work_permit_status, id
+      ]);
+    }
+
+    res.status(200).json({ message: 'Qualifications updated successfully!' });
   } catch (error) {
-      console.error('Error updating qualifications:', error);
-      res.status(500).json({ message: 'An error occurred while updating qualifications.', error: error.message });
+    console.error('Error updating qualifications:', error);
+    res.status(500).json({ message: 'An error occurred while updating qualifications.' });
   }
 });
 
