@@ -21,6 +21,8 @@ import UserGuide from "./UserGuide"
 import {
   Dialog,
 } from "@/components/ui/dialog"
+import QualificationsSection from './QualificationsSection';
+
 
 function CandidateDetails() {
     const location = useLocation();
@@ -283,10 +285,8 @@ const user8=decodedToken.username;
           }
    };
 
-   const handleResumeChange = (e) => {
-    const file = e.target.files[0];
-    console.log('Selected file:', file);
-    setResumeFile(file);
+    const handleResumeChange = (e) => {
+      setResumeFile(e.target.files[0]); // Store the selected resume file
   };
 
 
@@ -361,29 +361,22 @@ const handleSubmit = async (e, section) => {
       const formDataToSubmit = new FormData();
 
       switch (section) {
-        case 'personalDetails':
-          Object.entries(draftData.personalDetails).forEach(([key, value]) => {
-              formDataToSubmit.append(key, value);
-          });
-      
-          if (resumeFile) {
-              formDataToSubmit.append('resume', resumeFile);
-          }
-      
-          const response = await axios.put(`http://localhost:3000/api/candidates/${id}/personal`, formDataToSubmit, {
-            headers: { 'Content-Type': 'multipart/form-data' }
-          });
-          
-          console.log('Response data:', response.data);
-          
-          setFormData(prev => ({
-            ...prev,
-            personalDetails: {
-              ...draftData.personalDetails,
-              resume_path: response.data.resume_path || prev.personalDetails.resume_path 
-            }
-          }));
-          break;
+          case 'personalDetails':
+              Object.entries(draftData.personalDetails).forEach(([key, value]) => {
+                  formDataToSubmit.append(key, value);
+              });
+              if (resumeFile) {
+                  formDataToSubmit.append('resume', resumeFile);
+              }
+              await axios.put(`http://localhost:3000/api/candidates/${id}/personal`, formDataToSubmit, {
+                  headers: { 'Content-Type': 'multipart/form-data' }
+              });
+              // Update actual data after successful submit
+              setFormData(prev => ({
+                  ...prev,
+                  personalDetails: draftData.personalDetails
+              }));
+              break;
 
           case 'qualifications':
               await axios.put(`http://localhost:3000/api/candidates/${id}/qualifications`, {
@@ -788,147 +781,26 @@ const handleSubmit = async (e, section) => {
                 <p className="text-gray-900 dark:text-white font-medium">N/A</p>
               )}
             </div>
-                  <div className="space-y-2">
-                          <Label className="text-sm text-gray-500 dark:text-gray-400">Resume</Label>
-                          <p className="text-[#343636] dark:text-white font-medium">
-                            {formData.personalDetails?.resume_path || 'No resume uploaded'}
-                          </p>
-                        </div>
+            <div className="space-y-2">
+              <Label className="text-sm text-gray-500 dark:text-gray-400">Resume</Label>
+              <p className="text-[#343636] dark:text-white font-medium">
+                {formData.personalDetails?.resume_path || 'No resume uploaded'}
+              </p>
+            </div>
           </div>
         )}
 
                   </div>
                 </div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-lg mb-6">
-         <div className="border-b border-gray-200 dark:border-gray-700 p-6">
-           <div className="flex justify-between items-center">
-             <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Qualifications</h3>
-             <Button 
-               variant="outline" 
-               size="sm" 
-               onClick={() => handleEditToggle('qualifications')}
-               className="border-[#15BACD] text-[#15BACD] hover:bg-[#15BACD] hover:text-white transition-colors"
-             >
-               <Edit2 className="h-4 w-4 mr-2" />
-               Edit Details
-             </Button>
-           </div>
-         </div>
-       
-         <div className="p-6">
-         {isEditing.qualifications ? (
-         <form onSubmit={(e) => handleSubmit(e, 'qualifications')}>
-           {draftData.qualifications.map((qual, index) => (
-             <div key={index} className="grid grid-cols-1 md:grid-cols-4 gap-6">
-               <div className="space-y-2 col-span-1">
-                 <Label>Recent Job</Label>
-                 <Input
-                   name={`qualification_${index}_recent_job`}
-                   value={qual.recent_job || ''}
-                   onChange={handleChange}
-                   className="border-gray-300 focus:border-[#15BACD] w-full"
-                 />
-               </div>
-               <div className="space-y-2 col-span-1">
-                 <Label>Preferred Role</Label>
-                 <Input
-                   name={`qualification_${index}_preferred_roles`}
-                   value={qual.preferred_roles || ''}
-                   onChange={handleChange}
-                   className="border-gray-300 focus:border-[#15BACD] focus:ring-[#15BACD] w-full"
-                 />
-               </div>
-               <div className="space-y-2 col-span-1">
-                 <Label>Availability</Label>
-                 <Input
-                   name={`qualification_${index}_availability`}
-                   value={qual.availability || ''}
-                   onChange={handleChange}
-                   className="border-gray-300 focus:border-[#15BACD] focus:ring-[#15BACD] w-full"
-                 />
-               </div>
-               <div className="space-y-2 col-span-1">
-                 <Label>Compensation</Label>
-                 <Input
-                   name={`qualification_${index}_compensation`}
-                   value={qual.compensation || ''}
-                   onChange={handleChange}
-                   className="border-gray-300 focus:border-[#15BACD] focus:ring-[#15BACD] w-full"
-                 />
-               </div>
-               <div className="space-y-2 col-span-1">
-                 <Label>Preferred Role Type</Label>
-                 <Input
-                   name={`qualification_${index}_preferred_role_type`}
-                   value={qual.preferred_role_type || ''}
-                   onChange={handleChange}
-                   className="border-gray-300 focus:border-[#15BACD] focus:ring-[#15BACD] w-full"
-                 />
-               </div>
-               <div className="space-y-2 col-span-1">
-                 <Label>Preferred Work Type</Label>
-                 <Input
-                   name={`qualification_${index}_preferred_work_arrangement`}
-                   value={qual.preferred_work_arrangement || ''}
-                   onChange={handleChange}
-                   className="border-gray-300 focus:border-[#15BACD] focus:ring-[#15BACD] w-full"
-                 />
-               </div>
-               
-             </div>
-           ))}
-           <div className="flex justify-end space-x-3 mt-6">
-             <Button 
-               type="button" 
-               variant="outline" 
-               onClick={() => handleEditToggle('qualifications')}
-               className="border-gray-300 text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
-             >
-               Cancel
-             </Button>
-             <Button 
-               type="submit"
-               className="bg-gradient-to-r from-[#15BACD] to-[#094DA2] text-white hover:opacity-90"
-             >
-               Save Changes
-             </Button>
-           </div>
-         </form>
-       ) : (
-         <div className="space-y-6">
-           {formData.qualifications.map((qual, index) => (
-             <div key={index} className="grid grid-cols-2 md:grid-cols-4 gap-6">
-               <div className="space-y-2">
-                 <Label className="text-sm text-gray-500 dark:text-gray-400">Recent Job</Label>
-                 <p className="text-gray-900 dark:text-white font-medium">{qual.recent_job || 'N/A'}</p>
-               </div>
-               <div className="space-y-2">
-                 <Label className="text-sm text-gray-500 dark:text-gray-400">Preferred Role</Label>
-                 <p className="text-gray-900 dark:text-white font-medium">{qual.preferred_roles || 'N/A'}</p>
-               </div>
-               <div className="space-y-2">
-                 <Label className="text-sm text-gray-500 dark:text-gray-400">Availability</Label>
-                 <p className="text-gray-900 dark:text-white font-medium">{qual.availability || 'N/A'}</p>
-               </div>
-               <div className="space-y-2">
-                 <Label className="text-sm text-gray-500 dark:text-gray-400">Compensation</Label>
-                 <p className="text-gray-900 dark:text-white font-medium">{qual.compensation || 'N/A'}</p>
-               </div>
-               <div className="space-y-2">
-                 <Label className="text-sm text-gray-500 dark:text-gray-400">Preferred Role Type</Label>
-                 <p className="text-gray-900 dark:text-white font-medium">{qual.preferred_role_type || 'N/A'}</p>
-               </div>
-               <div className="space-y-2">
-                 <Label className="text-sm text-gray-500 dark:text-gray-400">Preferred Work Type</Label>
-                 <p className="text-gray-900 dark:text-white font-medium">{qual.preferred_work_arrangement || 'N/A'}</p>
-               </div>
-               
-             </div>
-           ))}
-         </div>
-       )}</div>
-       </div>
+                <QualificationsSection 
+        formData={formData}
+        setFormData={setFormData}
+        details={details}
+        isEditing={isEditing}
+        handleEditToggle={handleEditToggle}
+      />
+
        
        
        {/* Skills and Certifications Grid */}
