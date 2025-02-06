@@ -16,6 +16,7 @@ import { Toggle } from "@/components/ui/toggle";
 import {SunIcon, MoonIcon } from '@heroicons/react/solid';
 import { SkillsEditForm, CertificationsEditForm } from './EditSandC';
 import LoadingSpinner from './LoadingSpinner';
+import QualificationsSection from './QualificationsSection';
 
 
 function CandidateDetails() {
@@ -428,86 +429,54 @@ const recentJob = formData.qualifications.length > 0 ? formData.qualifications[0
           ) : (
             <>
 
+ 
  {/* Header Section */}
  <header
-   className={cn(
-     "fixed top-0 left-0 right-0 z-10 shadow-md",
-     isDarkMode ? "bg-gray-800" : "bg-white"
-   )}
- >
-   <div className="flex justify-between items-center p-2 sm:p-4 w-full">
-     {/* Logo and Title */}
-     <div className="flex items-center space-x-2">
-       <img
-         src={oneVectorImage}
-         alt="OneVector Logo"
-         className="w-5 h-6 sm:w-8 sm:h-8"
-       />
-       <h1
-         className={cn(
-           "text-lg sm:text-2xl font-medium tracking-wide",
-           "text-transparent bg-clip-text bg-gradient-to-r from-[#15BACD] to-[#094DA2]"
-         )}
-       >
-         TalentHub
-       </h1>
-     </div>
- 
-     {/* Action Buttons */}
-     <div className="flex items-center space-x-2">
-       {/* Dark Mode Toggle Button */}
-       <Toggle
-         onClick={toggleTheme}
-         className={cn(
-           "p-1 sm:p-2 rounded-full",
-           isDarkMode
-             ? "bg-gray-700 hover:bg-gray-600"
-             : "bg-gray-200 hover:bg-gray-300"
-         )}
-       >
-         {isDarkMode ? (
-           <SunIcon className="w-4 h-4 sm:w-5 sm:h-5 text-gray-100" />
-         ) : (
-           <MoonIcon className="w-4 h-4 sm:w-5 sm:h-5 text-gray-800" />
-         )}
-       </Toggle>
- 
-       {/* Logout Button */}
-       <Button
-         variant="outline"
-         onClick={handleLogout}
-         className={cn(
-           "px-3 sm:px-4 py-1 sm:py-2 h-8 sm:h-10 rounded-full flex items-center justify-center space-x-2 text-sm sm:text-base font-semibold transition-all",
-           isDarkMode
-             ? "bg-gradient-to-r from-red-500 to-red-700 text-white hover:from-red-600 hover:to-red-800"
-             : "bg-gradient-to-r from-red-400 to-red-600 text-white hover:from-red-500 hover:to-red-700"
-         )}
-       >
-         <svg
-           xmlns="http://www.w3.org/2000/svg"
-           fill="none"
-           viewBox="0 0 24 24"
-           strokeWidth="1.5"
-           stroke="currentColor"
-           className="w-4 h-4 sm:w-5 sm:h-5"
-         >
-           <path
-             strokeLinecap="round"
-             strokeLinejoin="round"
-             d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-7.5A2.25 2.25 0 003.75 5.25v13.5A2.25 2.25 0 006 21h7.5a2.25 2.25 0 002.25-2.25V15"
+       className={cn(
+         "fixed top-0 left-0 right-0 z-10 shadow-md",
+         isDarkMode ? "bg-gray-800" : "bg-white"
+       )}
+     >
+       <div className="flex justify-between items-center p-2 sm:p-4 w-full">
+         {/* Logo and Title */}
+         <div className="flex items-center space-x-2">
+           <img
+             src={oneVectorImage}
+             alt="OneVector Logo"
+             className="w-5 h-6 sm:w-8 sm:h-10"
            />
-           <path
-             strokeLinecap="round"
-             strokeLinejoin="round"
-             d="M18 12H9m0 0l3-3m-3 3l3 3"
-           />
-         </svg>
-         <span>Logout</span>
-       </Button>
-     </div>
-   </div>
- </header>
+           <h1
+             className={cn(
+               "text-lg sm:text-2xl font-semibold tracking-wide",
+               "text-transparent bg-clip-text bg-gradient-to-r from-[#15BACD] to-[#094DA2]"
+             )}
+           >
+             TalentHub
+           </h1>
+         </div>
  
+         {/* Action Section */}
+         <div className="flex items-center space-x-3">
+           <Button
+             variant="ghost"
+             size="icon"
+             onClick={toggleTheme}
+           >
+             {isDarkMode ? <SunIcon /> : <MoonIcon />}
+           </Button>
+ 
+           {/* Logout Button */}
+           <Button
+             variant="destructive"
+             onClick={handleLogout}
+             className="rounded-full"
+           >
+             Logout
+           </Button>
+         </div>
+       </div>
+     </header>
+     
       {/* Main Content */}
 <div className="px-4 py-8 sm:px-6 sm:py-12">
   {/* Breadcrumb */}
@@ -741,138 +710,13 @@ const recentJob = formData.qualifications.length > 0 ? formData.qualifications[0
 </div>
 
    
-
-<div className="bg-white dark:bg-gray-800 rounded-lg mb-6">
-  <div className="border-b border-gray-200 dark:border-gray-700 p-6">
-    <div className="flex justify-between items-center">
-      <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Qualifications</h3>
-      <Button 
-        variant="outline" 
-        size="sm" 
-        onClick={() => handleEditToggle('qualifications')}
-        className="border-[#15BACD] text-[#15BACD] hover:bg-[#15BACD] hover:text-white transition-colors"
-      >
-        <Edit2 className="h-4 w-4 mr-2" />
-        Edit Details
-      </Button>
-    </div>
-  </div>
-
-  <div className="p-6">
-  {isEditing.qualifications ? (
-  <form onSubmit={(e) => handleSubmit(e, 'qualifications')}>
-    {draftData.qualifications.map((qual, index) => (
-      <div key={index} className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="space-y-2 col-span-1">
-          <Label>Recent Job</Label>
-          <Input
-            name={`qualification_${index}_recent_job`}
-            value={qual.recent_job || ''}
-            onChange={handleChange}
-            className="border-gray-300 focus:border-[#15BACD] w-full"
-          />
-        </div>
-        <div className="space-y-2 col-span-1">
-          <Label>Preferred Role</Label>
-          <Input
-            name={`qualification_${index}_preferred_roles`}
-            value={qual.preferred_roles || ''}
-            onChange={handleChange}
-            className="border-gray-300 focus:border-[#15BACD] focus:ring-[#15BACD] w-full"
-          />
-        </div>
-        <div className="space-y-2 col-span-1">
-          <Label>Availability</Label>
-          <Input
-            name={`qualification_${index}_availability`}
-            value={qual.availability || ''}
-            onChange={handleChange}
-            className="border-gray-300 focus:border-[#15BACD] focus:ring-[#15BACD] w-full"
-          />
-        </div>
-        <div className="space-y-2 col-span-1">
-          <Label>Compensation</Label>
-          <Input
-            name={`qualification_${index}_compensation`}
-            value={qual.compensation || ''}
-            onChange={handleChange}
-            className="border-gray-300 focus:border-[#15BACD] focus:ring-[#15BACD] w-full"
-          />
-        </div>
-        <div className="space-y-2 col-span-1">
-          <Label>Preferred Role Type</Label>
-          <Input
-            name={`qualification_${index}_preferred_role_type`}
-            value={qual.preferred_role_type || ''}
-            onChange={handleChange}
-            className="border-gray-300 focus:border-[#15BACD] focus:ring-[#15BACD] w-full"
-          />
-        </div>
-        <div className="space-y-2 col-span-1">
-          <Label>Preferred Work Type</Label>
-          <Input
-            name={`qualification_${index}_preferred_work_arrangement`}
-            value={qual.preferred_work_arrangement || ''}
-            onChange={handleChange}
-            className="border-gray-300 focus:border-[#15BACD] focus:ring-[#15BACD] w-full"
-          />
-        </div>
-        
-      </div>
-    ))}
-    <div className="flex justify-end space-x-3 mt-6">
-      <Button 
-        type="button" 
-        variant="outline" 
-        onClick={() => handleEditToggle('qualifications')}
-        className="border-gray-300 text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
-      >
-        Cancel
-      </Button>
-      <Button 
-        type="submit"
-        className="bg-gradient-to-r from-[#15BACD] to-[#094DA2] text-white hover:opacity-90"
-      >
-        Save Changes
-      </Button>
-    </div>
-  </form>
-) : (
-  <div className="space-y-6">
-    {formData.qualifications.map((qual, index) => (
-      <div key={index} className="grid grid-cols-2 md:grid-cols-4 gap-6">
-        <div className="space-y-2">
-          <Label className="text-sm text-gray-500 dark:text-gray-400">Recent Job</Label>
-          <p className="text-gray-900 dark:text-white font-medium">{qual.recent_job || 'N/A'}</p>
-        </div>
-        <div className="space-y-2">
-          <Label className="text-sm text-gray-500 dark:text-gray-400">Preferred Role</Label>
-          <p className="text-gray-900 dark:text-white font-medium">{qual.preferred_roles || 'N/A'}</p>
-        </div>
-        <div className="space-y-2">
-          <Label className="text-sm text-gray-500 dark:text-gray-400">Availability</Label>
-          <p className="text-gray-900 dark:text-white font-medium">{qual.availability || 'N/A'}</p>
-        </div>
-        <div className="space-y-2">
-          <Label className="text-sm text-gray-500 dark:text-gray-400">Compensation</Label>
-          <p className="text-gray-900 dark:text-white font-medium">{qual.compensation || 'N/A'}</p>
-        </div>
-        <div className="space-y-2">
-          <Label className="text-sm text-gray-500 dark:text-gray-400">Preferred Role Type</Label>
-          <p className="text-gray-900 dark:text-white font-medium">{qual.preferred_role_type || 'N/A'}</p>
-        </div>
-        <div className="space-y-2">
-          <Label className="text-sm text-gray-500 dark:text-gray-400">Preferred Work Type</Label>
-          <p className="text-gray-900 dark:text-white font-medium">{qual.preferred_work_arrangement || 'N/A'}</p>
-        </div>
-       
-      </div>
-    ))}
-  </div>
-)}
-</div>
-</div>
-
+<QualificationsSection 
+        formData={formData}
+        setFormData={setFormData}
+        details={details}
+        isEditing={isEditing}
+        handleEditToggle={handleEditToggle}
+      />
 
 {/* Skills and Certifications Grid */}
 <div className="grid md:grid-cols-2 gap-8">
