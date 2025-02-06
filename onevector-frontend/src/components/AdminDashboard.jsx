@@ -215,7 +215,7 @@ function AdminDashboard() {
 
   const filterOptions = {
     availability: [
-      { value: "immediate", label: "Immediate" },
+      { value: "Immediate", label: "Immediate" },
       { value: "2_weeks", label: "2 Weeks Notice" },
       { value: "1_month", label: "1 Month Notice" },
       { value: "2_months", label: "2 Months Notice" },
@@ -814,10 +814,10 @@ function AdminDashboard() {
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                className="absolute right-8"
+                                className="absolute right-8 top-1/2 -translate-y-1/2"
                                 onClick={() => removeFilter(key, filters[key])}
                               >
-                                <X className="h-2 w-4" />
+                                <X className="h-4 w-4" />
                               </Button>
                             )}
                           </div>
@@ -1074,7 +1074,7 @@ function AdminDashboard() {
                           {formatList(candidate.details?.certifications)}
                         </div>
                       </TableCell>
-                      <TableCell className="py-4 px-4">
+                      <TableCell className="py-4 px-4" data-tutorial="actions">
                         <div className="flex justify-end gap-2">
                           <Button
                             variant="outline"
